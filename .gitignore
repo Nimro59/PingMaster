@@ -1,0 +1,14 @@
+# Dépendances Frontend
+node_modules/
+.expo/
+dist/
+
+# Dépendances Backend
+__pycache__/
+venv/
+env/
+*.sqlite3  # Optionnel : décommenter si tu ne veux pas push la BDD de dev
+
+# Fichiers OS et variables d'environnement
+.DS_Store
+.env

@@ -1,0 +1,26 @@
+[
+    {
+        "nom": "LEBRUN",
+        "prenom": "Felix",
+        "points": 2800,
+        "club": "Montpellier TT"
+    },
+    {
+        "nom": "LEBRUN",
+        "prenom": "Alexis",
+        "points": 2750,
+        "club": "Montpellier TT"
+    },
+    {
+        "nom": "GAUZY",
+        "prenom": "Simon",
+        "points": 2600,
+        "club": "Levallois"
+    },
+    {
+        "nom": "PAVADE",
+        "prenom": "Prithika",
+        "points": 2300,
+        "club": "Saint-Denis"
+    }
+]
