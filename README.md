@@ -4,7 +4,7 @@
 
 PingMaster est une solution complète permettant aux joueurs d'un club d'enregistrer leurs matchs d'entraînement, de calculer automatiquement leur évolution de points (basé sur l'algorithme officiel FFTT) et de visualiser des statistiques avancées type "Moneyball".
 
-## 🚀 Fonctionnalités Clés
+## Fonctionnalités Clés
 
 - **Système de Classement Dynamique** : Calcul automatique des points gagnés/perdus après chaque match selon le barème officiel.
 - **Analyse de Données (Moneyball)** :
@@ -13,7 +13,7 @@ PingMaster est une solution complète permettant aux joueurs d'un club d'enregis
 - **Gestion des Joueurs** : Base de données importée avec les licenciés réels du club.
 - **Matchmaking Intelligent** : Saisie rapide des scores avec recherche automatique de l'adversaire.
 
-## 🛠 Stack Technique
+## Stack Technique
 
 **Backend & Data**
 - **Langage** : Python 3.14.4
@@ -24,7 +24,7 @@ PingMaster est une solution complète permettant aux joueurs d'un club d'enregis
 - **Framework** : React Native / Expo
 - **UI/UX** : Interface moderne avec navigation fluide et visualisation de données graphiques.
 
-## 📦 Installation & Démarrage
+## Installation & Démarrage
 
 ### Pré-requis
 - Python 3.10+
