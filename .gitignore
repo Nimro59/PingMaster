@@ -1,5 +1,4 @@
 # Dépendances Frontend
-node_modules/
 .expo/
 dist/
 npm-debug.log
