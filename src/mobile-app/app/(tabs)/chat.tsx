@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 
-const API_URL = "http://192.168.213.71:8000"; 
+const API_URL = "http://192.168.1.18:8000"; 
 
 interface Message {
   id: number;

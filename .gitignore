@@ -7,8 +7,13 @@ dist/
 __pycache__/
 venv/
 env/
-*.sqlite3  # Optionnel : décommenter si tu ne veux pas push la BDD de dev
+.sqlite3  # Optionnel : décommenter si tu ne veux pas push la BDD de dev
 
 # Fichiers OS et variables d'environnement
 .DS_Store
 .env
+
+# Fichiers bureautiques
+.docx
+.pdf
+.png

@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIn
 import { useFocusEffect } from 'expo-router';
 import Autocomplete from '../components/Autocomplete'; // <--- Import du composant
 
-const API_URL = "http://192.168.213.71:8000";
+const API_URL = "http://192.168.1.18:8000";
 
 interface Joueur {
   id: number;

@@ -3,6 +3,8 @@ from fastapi import FastAPI, HTTPException # type: ignore
 from pydantic import BaseModel # type: ignore
 from fastapi.middleware.cors import CORSMiddleware # type: ignore 
 import itertools
+import string
+import math
 
 # --- 0. LE CERVEAU (Barème Officiel FFTT) ---
 def calculer_points_fftt(points_vainqueur, points_perdant):
@@ -367,8 +369,6 @@ def get_participants(id: int):
         
     return clean_list
 
-import string
-
 @app.post("/tournois/{id}/generation")
 def generer_poules(id: int):
     conn = get_db_connection()
@@ -380,12 +380,12 @@ def generer_poules(id: int):
     cursor.execute("SELECT nb_tables FROM tournois WHERE id = ?", (id,))
     nb_poules = cursor.fetchone()[0]
     
-    import string
     lettres = string.ascii_uppercase[:nb_poules]
     groupes = {l: [] for l in lettres}
     
     cursor.execute("DELETE FROM matchs_tournoi WHERE tournoi_id = ?", (id,))
     
+    # Serpent
     montee = True
     index = 0
     for p_id in participants:
@@ -399,24 +399,27 @@ def generer_poules(id: int):
             if index > 0: index -= 1
             else: montee = True
 
-    # Génération Intelligente (Tours séparés pour pouvoir jouer plusieurs matchs en même temps)
+    # Algorithme Round-Robin structuré par tours
     for lettre, ids in groupes.items():
-        paires = []
-        if len(ids) == 3:
-            paires = [(0, 2), (1, 2), (0, 1)]
-        elif len(ids) == 4:
-            paires = [(0, 3), (1, 2), (0, 2), (1, 3), (0, 1), (2, 3)]
-        else:
-            import itertools
-            paires = list(itertools.combinations(range(len(ids)), 2))
-
-        for idx_match, (i1, i2) in enumerate(paires):
-            # Assigne un numéro de tour logique
-            tour = str((idx_match // 2) + 1) if len(ids) == 4 else str(idx_match + 1)
-            cursor.execute("""
-                INSERT INTO matchs_tournoi (tournoi_id, poule, joueur1_id, joueur2_id, tour)
-                VALUES (?, ?, ?, ?, ?)
-            """, (id, lettre, ids[i1], ids[i2], tour))
+        n = len(ids)
+        if n < 2: continue
+        
+        # Astuce mathématique pour gérer les poules paires/impaires
+        r_ids = ids[:]
+        if n % 2 != 0: r_ids.append(None) # Le joueur "None" sera l'exempté
+        n_rond = len(r_ids)
+        
+        for tour in range(n_rond - 1):
+            for i in range(n_rond // 2):
+                p1 = r_ids[i]
+                p2 = r_ids[n_rond - 1 - i]
+                if p1 is not None and p2 is not None:
+                    cursor.execute("""
+                        INSERT INTO matchs_tournoi (tournoi_id, poule, joueur1_id, joueur2_id, tour)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (id, lettre, p1, p2, str(tour + 1)))
+            # Rotation pour le prochain tour
+            r_ids.insert(1, r_ids.pop())
 
     cursor.execute("UPDATE tournois SET status = 'poules' WHERE id = ?", (id,))
     conn.commit()
@@ -428,7 +431,6 @@ def cloturer_poules(id: int):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # 1. CLASSEMENT
     cursor.execute("SELECT poule, joueur1_id, score1, joueur2_id, score2 FROM matchs_tournoi WHERE tournoi_id = ? AND poule != 'Tableau'", (id,))
     matchs = cursor.fetchall()
     
@@ -443,69 +445,61 @@ def cloturer_poules(id: int):
     cursor.execute("SELECT DISTINCT poule FROM participants_tournoi WHERE tournoi_id = ?", (id,))
     lettres_poules = sorted([row[0] for row in cursor.fetchall()])
     
-    # 2. SELECTION DES 2 MEILLEURS DE CHAQUE POULE
     qualifies = []
     for l in lettres_poules:
         cursor.execute("SELECT id FROM participants_tournoi WHERE tournoi_id = ? AND poule = ?", (id, l))
         ids_poule = [row[0] for row in cursor.fetchall()]
         classement = sorted(ids_poule, key=lambda pid: points.get(pid, 0), reverse=True)
-        
-        if len(classement) >= 1: qualifies.append({"poule": l, "pos": 1, "id": classement[0]})
-        if len(classement) >= 2: qualifies.append({"poule": l, "pos": 2, "id": classement[1]})
+        if len(classement) >= 1: qualifies.append(classement[0])
+        if len(classement) >= 2: qualifies.append(classement[1])
 
-    # 3. GÉNÉRATION UNIVERSELLE DU TABLEAU (Marche avec 1, 2, 3, 4, ou N poules !)
-    # On trie d'abord tous les 1ers ensemble, puis tous les 2èmes
-    qualifies_tries = sorted(qualifies, key=lambda x: x['pos']) 
-    matchs_tableau = []
-    n = len(qualifies_tries)
+    # ALGORITHME DES PUISSANCES DE 2 ET DES "BYES"
+    nb_qual = len(qualifies)
+    if nb_qual < 2: return {"error": "Pas assez de qualifiés"}
     
-    # Le meilleur (début de liste) affronte le moins bon (fin de liste)
-    for i in range(n // 2):
-        j1 = qualifies_tries[i]['id']
-        j2 = qualifies_tries[n - 1 - i]['id']
+    # Calcul de la puissance de 2 supérieure
+    taille_tableau = 2**math.ceil(math.log2(nb_qual))
+    nb_byes = taille_tableau - nb_qual
+    
+    # On ajoute des "None" (Byes/Exemptés) à la fin de la liste des qualifiés
+    qualifies_complet = qualifies + [None] * nb_byes
+    
+    # Distribution Croisée standard (1er vs Dernier)
+    matchs_tableau = []
+    if taille_tableau > 8: tour_name = "1/8"
+    elif taille_tableau > 4: tour_name = "1/4"
+    elif taille_tableau > 2: tour_name = "1/2"
+    else: tour_name = "Finale"
+
+    # Génération du premier tour du tableau
+    for i in range(taille_tableau // 2):
+        j1 = qualifies_complet[i]
+        j2 = qualifies_complet[taille_tableau - 1 - i]
         
-        # Détermine le nom du tour automatiquement
-        if n > 8: tour_name = "1/8"
-        elif n > 4: tour_name = "1/4"
-        elif n > 2: tour_name = "1/2"
-        else: tour_name = "Finale"
+        # Si un joueur tombe contre un Bye, il gagne 3-0 automatiquement
+        term = 1 if (j1 is None or j2 is None) else 0
+        s1 = 3 if j2 is None else 0
+        s2 = 3 if j1 is None else 0
         
-        matchs_tableau.append((j1, j2, tour_name))
+        matchs_tableau.append((j1, j2, tour_name, s1, s2, term))
 
     cursor.execute("DELETE FROM matchs_tournoi WHERE tournoi_id = ? AND poule = 'Tableau'", (id,))
-    
-    for j1, j2, tour in matchs_tableau:
+    for j1, j2, tour, s1, s2, term in matchs_tableau:
         cursor.execute("""
-            INSERT INTO matchs_tournoi (tournoi_id, poule, joueur1_id, joueur2_id, tour)
-            VALUES (?, 'Tableau', ?, ?, ?)
-        """, (id, j1, j2, tour))
+            INSERT INTO matchs_tournoi (tournoi_id, poule, joueur1_id, joueur2_id, tour, score1, score2, termine)
+            VALUES (?, 'Tableau', ?, ?, ?, ?, ?, ?)
+        """, (id, j1, j2, tour, s1, s2, term))
 
     cursor.execute("UPDATE tournois SET status = 'tableau' WHERE id = ?", (id,))
     conn.commit()
     conn.close()
-    return {"status": "Tableau final généré !"}
+    return {"status": "Tableau généré avec Byes"}
 
-@app.post("/tournois/match")
-def update_match_score(data: dict):
-    # data attendu : {match_id: 12, score1: 3, score2: 1}
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE matchs_tournoi 
-        SET score1 = ?, score2 = ?, termine = 1 
-        WHERE id = ?
-    """, (data['score1'], data['score2'], data['match_id']))
-    conn.commit()
-    conn.close()
-    return {"status": "Score enregistré"}
-
-# Route pour récupérer l'affichage des poules
 @app.get("/tournois/{id}/poules")
 def get_poules_display(id: int):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # 1. Les Joueurs
     cursor.execute("""
         SELECT pt.id, pt.poule, pt.nom_invite, j.nom, j.prenom, pt.points_depart
         FROM participants_tournoi pt
@@ -515,12 +509,11 @@ def get_poules_display(id: int):
     """, (id,))
     joueurs_data = cursor.fetchall()
     
-    # 2. Les Matchs
     cursor.execute("""
         SELECT m.id, m.poule, 
                p1.nom_invite, j1.nom, j1.prenom,
                p2.nom_invite, j2.nom, j2.prenom,
-               m.score1, m.score2, m.termine, m.tour
+               m.score1, m.score2, m.termine, m.tour, m.joueur1_id, m.joueur2_id
         FROM matchs_tournoi m
         LEFT JOIN participants_tournoi p1 ON m.joueur1_id = p1.id
         LEFT JOIN joueurs j1 ON p1.joueur_id = j1.id
@@ -531,34 +524,41 @@ def get_poules_display(id: int):
     matchs_data = cursor.fetchall()
     conn.close()
     
-    # Formatage
     resultat = {}
-    
-    # On range les joueurs
     for row in joueurs_data:
         p_id, lettre, invite, nom, prenom, pts = row
         nom_final = f"{prenom} {nom}" if nom else invite
         if lettre not in resultat: resultat[lettre] = {"joueurs": [], "matchs": []}
         resultat[lettre]["joueurs"].append({"id": p_id, "nom": nom_final, "points": pts})
         
-    # On range les matchs (C'EST ICI LA CORRECTION)
     for row in matchs_data:
-        m_id, lettre, inv1, n1, p1, inv2, n2, p2, s1, s2, term, tour = row
+        m_id, lettre, inv1, n1, p1, inv2, n2, p2, s1, s2, term, tour, j1_id, j2_id = row
+        
         nom1 = f"{p1} {n1}" if n1 else inv1
         nom2 = f"{p2} {n2}" if n2 else inv2
         
-        # SI LA BOÎTE (ex: "Tableau") N'EXISTE PAS ENCORE, ON LA CRÉE
-        if lettre not in resultat:
-             resultat[lettre] = {"joueurs": [], "matchs": []}
-            
+        # Gestion visuelle des "Exemptés"
+        if j1_id is None: nom1 = "Exempté"
+        if j2_id is None: nom2 = "Exempté"
+        
+        if lettre not in resultat: resultat[lettre] = {"joueurs": [], "matchs": []}
         resultat[lettre]["matchs"].append({
-            "id": m_id, 
-            "j1": nom1, "j2": nom2, 
-            "s1": s1, "s2": s2, "termine": term,
-            "tour": tour # Important pour le tri des phases finales
+            "id": m_id, "j1": nom1, "j2": nom2, "s1": s1, "s2": s2, "termine": term, "tour": tour 
         })
-
+            
     return resultat
+
+@app.post("/tournois/match")
+def update_match_score(data: dict):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE matchs_tournoi SET score1 = ?, score2 = ?, termine = 1 WHERE id = ?", 
+                   (data['score1'], data['score2'], data['match_id']))
+    
+    # Si c'est un match de tableau, la logique d'avancement automatique sera gérée ici plus tard
+    conn.commit()
+    conn.close()
+    return {"status": "Score enregistré"}
 
 # --- 4. MESSAGERIE INTERNE ---
 class MessageModel(BaseModel):

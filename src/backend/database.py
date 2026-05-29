@@ -1,90 +1,121 @@
+import os
+import psycopg2 # type: ignore
+from psycopg2.extras import RealDictCursor # type: ignore
 import sqlite3
 
+# L'URL de la base sera fournie par Render, sinon on utilise SQLite en local
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+class PostgresWrapper:
+    """Wrapper intelligent qui traduit la syntaxe SQLite (?) vers PostgreSQL (%s)"""
+    def __init__(self, conn):
+        self.conn = conn
+
+    def cursor(self):
+        cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+        original_execute = cursor.execute
+
+        def execute_wrapper(query, vars=None):
+            # On remplace les ? par des %s pour PostgreSQL
+            postgres_query = query.replace("?", "%s")
+            return original_execute(postgres_query, vars)
+        
+        cursor.execute = execute_wrapper
+        return cursor
+
+    def commit(self):
+        self.conn.commit()
+
+    def close(self):
+        self.conn.close()
+
+def get_db_connection():
+    if DATABASE_URL:
+        # Mode Production (Render)
+        conn = psycopg2.connect(DATABASE_URL)
+        return PostgresWrapper(conn)
+    else:
+        # Mode Développement (Local)
+        conn = sqlite3.connect('pingpong.db')
+        conn.row_factory = sqlite3.Row
+        return conn
+
 def initialiser_db():
-    conn = sqlite3.connect('pingpong.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
+    # PostgreSQL utilise SERIAL au lieu de AUTOINCREMENT
+    serial_type = "SERIAL" if DATABASE_URL else "INTEGER"
+    autoincrement = "" if DATABASE_URL else "AUTOINCREMENT"
+
 # Table VESTIAIRE (Publications)
-    cursor.execute("""
+    cursor.execute(f"""
     CREATE TABLE IF NOT EXISTS posts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        id {serial_type} PRIMARY KEY {autoincrement},
+        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         auteur TEXT NOT NULL,
         titre TEXT NOT NULL,
         contenu TEXT NOT NULL,
-        type TEXT DEFAULT 'info' -- 'info', 'resultat', 'urgent'
+        type TEXT DEFAULT 'info'
     );
     """)
 
 # Table ÉVÈNEMENTS
-    cursor.execute("""
+    cursor.execute(f"""
     CREATE TABLE IF NOT EXISTS evenements (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {serial_type} PRIMARY KEY {autoincrement},
         titre TEXT NOT NULL,
-        date TEXT NOT NULL,  -- Format YYYY-MM-DD
-        heure TEXT NOT NULL, -- Format HH:MM
-        type TEXT DEFAULT 'entrainement', -- 'entrainement', 'match', 'reunion', 'autre'
+        date TEXT NOT NULL,
+        heure TEXT NOT NULL,
+        type TEXT DEFAULT 'entrainement',
         lieu TEXT DEFAULT 'Salle du Club',
         description TEXT
     );
     """)
 
     # Table JOUEURS
-    cursor.execute("""
+    cursor.execute(f"""
     CREATE TABLE IF NOT EXISTS joueurs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        licence TEXT UNIQUE,
+        id {serial_type} PRIMARY KEY {autoincrement},
         nom TEXT NOT NULL,
         prenom TEXT NOT NULL,
-        points REAL,
-        club TEXT
+        points REAL DEFAULT 500.0,
+        club TEXT DEFAULT 'Mon Club'
     );
     """)
 
     # Table PRÉSENCES (Assiduité)
-    cursor.execute("""
+    cursor.execute(f"""
     CREATE TABLE IF NOT EXISTS presences (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {serial_type} PRIMARY KEY {autoincrement},
         joueur_id INTEGER,
-        date TEXT, -- YYYY-MM-DD
-        statut TEXT, -- 'present', 'absent', 'excuse', 'blesse'
+        date TEXT,
+        statut TEXT,
         FOREIGN KEY(joueur_id) REFERENCES joueurs(id)
     );
     """)
 
-    # Table MATCHS
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS matchs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date DATETIME DEFAULT CURRENT_TIMESTAMP,
-        gagnant_id INTEGER,
-        perdant_id INTEGER,
-        points_echanges REAL,
-        FOREIGN KEY(gagnant_id) REFERENCES joueurs(id),
-        FOREIGN KEY(perdant_id) REFERENCES joueurs(id)
-    );
-    """)
-    
     # Table TOURNOIS
-    cursor.execute("""
+    cursor.execute(f"""
     CREATE TABLE IF NOT EXISTS tournois (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {serial_type} PRIMARY KEY {autoincrement},
         nom TEXT NOT NULL,
-        date DATE DEFAULT CURRENT_DATE,
-        status TEXT DEFAULT 'inscription', -- 'inscription', 'poules', 'tableau', 'termine'
+        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        status TEXT DEFAULT 'inscription',
         nb_tables INTEGER DEFAULT 4
     );
     """)
 
     # Table PARTICIPATIONS (Lien Joueur <-> Tournoi)
     # On permet d'ajouter soit un ID de joueur existant, soit un nom "invité"
-    cursor.execute("""
+    cursor.execute(f"""
     CREATE TABLE IF NOT EXISTS participants_tournoi (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {serial_type} PRIMARY KEY {autoincrement},
         tournoi_id INTEGER,
-        joueur_id INTEGER NULL, -- Si c'est un membre du club
-        nom_invite TEXT NULL,   -- Si c'est un externe
-        points_depart INTEGER DEFAULT 500, -- Pour le tri des poules
+        joueur_id INTEGER NULL,
+        nom_invite TEXT NULL,
+        points_depart INTEGER DEFAULT 500,
+        poule TEXT,
         FOREIGN KEY(tournoi_id) REFERENCES tournois(id),
         FOREIGN KEY(joueur_id) REFERENCES joueurs(id)
     );
@@ -97,16 +128,17 @@ def initialiser_db():
         pass # La colonne existe déjà
 
     # Table MATCHS DE TOURNOI (Séparée des matchs officiels)
-    cursor.execute("""
+    cursor.execute(f"""
     CREATE TABLE IF NOT EXISTS matchs_tournoi (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {serial_type} PRIMARY KEY {autoincrement},
         tournoi_id INTEGER,
-        poule TEXT, -- 'A', 'B', 'C' ou 'Tableau'
-        joueur1_id INTEGER, -- ID du participant (pas du joueur global)
-        joueur2_id INTEGER,
+        poule TEXT,
+        joueur1_id INTEGER NULL,
+        joueur2_id INTEGER NULL,
         score1 INTEGER DEFAULT 0,
         score2 INTEGER DEFAULT 0,
-        termine BOOLEAN DEFAULT 0,
+        termine BOOLEAN DEFAULT False,
+        tour TEXT,
         FOREIGN KEY(tournoi_id) REFERENCES tournois(id)
     );
     """)
@@ -125,9 +157,9 @@ def initialiser_db():
         pass
 
     # Table MESSAGERIE
-    cursor.execute("""
+    cursor.execute(f"""
     CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id {serial_type} PRIMARY KEY {autoincrement},
         club_id INTEGER DEFAULT 1,
         auteur TEXT NOT NULL,
         contenu TEXT NOT NULL,
@@ -135,9 +167,9 @@ def initialiser_db():
     );
     """)
 
-    print("✅ Base de données vérifiée.")
     conn.commit()
     conn.close()
+    print("Base de données initialisée avec succès.")
 
 if __name__ == "__main__":
     initialiser_db()

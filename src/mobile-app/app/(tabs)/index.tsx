@@ -3,7 +3,7 @@ import { Text, View, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Mod
 import { useFocusEffect } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
 
-const API_URL = "http://192.168.213.71:8000"; 
+const API_URL = "http://192.168.1.18:8000"; 
 
 type Post = {
   id: number;
