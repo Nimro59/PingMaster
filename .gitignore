@@ -20,5 +20,5 @@ pingpong.db
 *.docx
 *.pdf
 ~$*
-*.png
-*.jpg
+/*.png
+/*.jpg
