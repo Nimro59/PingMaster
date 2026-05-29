@@ -212,61 +212,6 @@ def get_assiduite():
         })
     return resultat
 
-@app.post("/match")
-def jouer_match(match: MatchInput):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # 1. Récupérer le GAGNANT (Nom ET Prénom)
-    # On utilise "LIKE" pour ignorer les majuscules/minuscules
-    cursor.execute("""
-        SELECT * FROM joueurs 
-        WHERE nom LIKE ? AND prenom LIKE ?
-    """, (match.nom_gagnant, match.prenom_gagnant))
-    gagnant = cursor.fetchone()
-    
-    # 2. Récupérer le PERDANT (Nom ET Prénom)
-    cursor.execute("""
-        SELECT * FROM joueurs 
-        WHERE nom LIKE ? AND prenom LIKE ?
-    """, (match.nom_perdant, match.prenom_perdant))
-    perdant = cursor.fetchone()
-    
-    # Vérification stricte
-    if not gagnant:
-        conn.close()
-        raise HTTPException(status_code=404, detail=f"Gagnant introuvable : {match.prenom_gagnant} {match.nom_gagnant}")
-    
-    if not perdant:
-        conn.close()
-        raise HTTPException(status_code=404, detail=f"Perdant introuvable : {match.prenom_perdant} {match.nom_perdant}")
-    
-    # 3. CALCULER LES POINTS (Barème FFTT)
-    points_g, points_p = gagnant['points'], perdant['points']
-    new_pts_g, new_pts_p, echange = calculer_points_fftt(points_g, points_p)
-    
-    # 4. MISE À JOUR (UPDATE)
-    cursor.execute("UPDATE joueurs SET points = ? WHERE id = ?", (new_pts_g, gagnant['id']))
-    cursor.execute("UPDATE joueurs SET points = ? WHERE id = ?", (new_pts_p, perdant['id']))
-    
-    # SAUVEGARDE DE L'HISTORIQUE DES MATCHS
-    cursor.execute("""
-        INSERT INTO matchs (gagnant_id, perdant_id, points_echanges)
-        VALUES (?, ?, ?)
-    """, (gagnant['id'], perdant['id'], echange))
-
-    conn.commit() # On valide tout d'un coup
-    conn.close()
-    
-    return {
-        "message": "Match enregistré avec succès !",
-        "details": {
-            "gagnant": f"{gagnant['prenom']} {gagnant['nom']} ({points_g} -> {new_pts_g})",
-            "perdant": f"{perdant['prenom']} {perdant['nom']} ({points_p} -> {new_pts_p})",
-            "points_echanges": echange
-        }
-    }
-
 class TournoiModel(BaseModel):
     nom: str
     nb_tables: int
