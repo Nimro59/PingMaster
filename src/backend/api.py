@@ -5,51 +5,14 @@ from fastapi.middleware.cors import CORSMiddleware # type: ignore
 import itertools
 import string
 import math
-
-# --- 0. LE CERVEAU (Barème Officiel FFTT) ---
-def calculer_points_fftt(points_vainqueur, points_perdant):
-    """
-    Calcule les points gagnés/perdus selon la grille officielle FFTT.
-    Retourne : (nouveau_pts_gagnant, nouveau_pts_perdant, echange)
-    """
-    ecart = abs(points_vainqueur - points_perdant)
-    
-    # Déterminer si c'est une victoire "Normale" ou une "Perf"
-    # Si le vainqueur avait moins de points (ou autant), c'est une Perf.
-    is_perf = points_vainqueur < points_perdant
-
-    # Grille officielle (Ecart min, Ecart max, Gain si Normal, Gain si Perf)
-    # Source : Règlement Fédéral
-    grille = [
-        (0, 24, 6.0, 6.0),      # Écart très faible
-        (25, 49, 5.5, 7.0),
-        (50, 99, 5.0, 8.0),
-        (100, 149, 4.0, 10.0),
-        (150, 199, 3.0, 13.0),
-        (200, 299, 2.0, 17.0),
-        (300, 399, 1.0, 22.0),
-        (400, 99999, 0.5, 28.0) # Écart énorme
-    ]
-
-    points_echange = 0
-
-    # On parcourt la grille pour trouver la bonne ligne
-    for (min_e, max_e, gain_normal, gain_perf) in grille:
-        if min_e <= ecart <= max_e:
-            if is_perf:
-                points_echange = gain_perf
-            else:
-                points_echange = gain_normal
-            break # On a trouvé, on arrête de chercher
-
-    # Application des points
-    nouveau_pts_gagnant = points_vainqueur + points_echange
-    nouveau_pts_perdant = points_perdant - points_echange
-
-    # Petit détail pro : on arrondit pour éviter les 1200.0000001
-    return round(nouveau_pts_gagnant, 2), round(nouveau_pts_perdant, 2), points_echange
+from database import get_db_connection, initialiser_db, PostgresWrapper
 
 app = FastAPI(title="PingMaster API - SQLite Backend")
+
+@app.on_event("startup")
+def startup_event():
+    print("Démarrage du serveur : Vérification de la base de données...")
+    initialiser_db()
 
 # Cela autorise le navigateur (Web) à discuter avec le serveur
 app.add_middleware(
