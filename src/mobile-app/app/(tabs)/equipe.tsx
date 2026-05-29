@@ -2,7 +2,7 @@ import React, { useState, useCallback } from "react";
 import { Text, View, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 
-const API_URL = "http://192.168.1.18:8000"; 
+const API_URL = "https://pingmaster-api.onrender.com/"; 
 
 interface Joueur {
   id: number;

@@ -19,13 +19,19 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.tonnom.pingmaster" 
+      "package": "com.tonnom.pingmaster"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "55b83377-e55c-41cd-8dc6-c69d58fe4aba"
+      }
+    }
   }
 }

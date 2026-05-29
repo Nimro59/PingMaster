@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = "http://192.168.1.18:8000"; 
+const API_URL = "https://pingmaster-api.onrender.com/"; 
 
 export default function StatsAssiduiteScreen() {
   const [stats, setStats] = useState([]);

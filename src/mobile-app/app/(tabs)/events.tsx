@@ -3,7 +3,7 @@ import { Text, View, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, A
 import { useFocusEffect } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
 
-const API_URL = "http://192.168.1.18:8000"; 
+const API_URL = "https://pingmaster-api.onrender.com/"; 
 
 interface Evenement {
   id: number;

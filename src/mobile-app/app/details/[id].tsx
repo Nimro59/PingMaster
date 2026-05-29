@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ActivityIndicator, Dimensions, ScrollView } fro
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { LineChart } from 'react-native-chart-kit';
 
-const API_URL = "http://192.168.1.18:8000";
+const API_URL = "https://pingmaster-api.onrender.com/";
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
 export default function PlayerProfile() {

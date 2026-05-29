@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, A
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 
-const API_URL = "http://192.168.1.18:8000"; 
+const API_URL = "https://pingmaster-api.onrender.com/"; 
 
 export default function LiveHubScreen() {
   const [livesClub, setLivesClub] = useState([]);

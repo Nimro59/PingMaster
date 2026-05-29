@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, A
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 
-const API_URL = "http://192.168.1.18:8000"; // Remplacer par ton IP
+const API_URL = "https://pingmaster-api.onrender.com/"; // Remplacer par ton IP
 
 export default function TournamentScreen() {
   const [tournois, setTournois] = useState([]);
