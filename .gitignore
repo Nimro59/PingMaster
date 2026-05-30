@@ -17,8 +17,9 @@ pingpong.db
 
 # --- DOCUMENTS PERSONNELS ET OS ---
 .DS_Store
-*.docx
-*.pdf
-~$*
+/*.docx
+/*.pdf
+/~$*
 /*.png
 /*.jpg
+/*.md
