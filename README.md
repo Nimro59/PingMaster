@@ -37,7 +37,7 @@ source venv/Scripts/activate  # Sur Windows
 pip install -r requirements.txt
 # Lancement du serveur API
 uvicorn api:app --host 0.0.0.0 --port 8000 --reload
-```bash
+```
 
 ### 2. Frontend (Application Mobile)
 ```bash
@@ -46,7 +46,7 @@ cd mobile-app
 npm install
 # Lancement de l'environnement Expo
 npx expo start
-```bash
+```
 
 Note pour les développeurs : Si vous testez en local, assurez-vous de modifier la variable API_URL dans les composants React Native pour cibler votre adresse IP locale (http://192.168.X.X:8000) au lieu de l'URL de production.
 
