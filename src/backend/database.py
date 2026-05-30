@@ -1,6 +1,6 @@
 import os
 import psycopg2
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import DictCursor
 import sqlite3
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -10,7 +10,7 @@ class PostgresWrapper:
         self.conn = conn
 
     def cursor(self):
-        cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+        cursor = self.conn.cursor(cursor_factory=DictCursor)
         original_execute = cursor.execute
 
         def execute_wrapper(query, vars=None):
