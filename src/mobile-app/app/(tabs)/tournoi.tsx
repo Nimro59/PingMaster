@@ -1,343 +1,243 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, Alert, ScrollView, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { BackHandler, FlatList, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { BracketView } from '@/components/tournoi/BracketView';
+import { CreateSheet } from '@/components/tournoi/CreateSheet';
+import { Inscrits } from '@/components/tournoi/Inscrits';
+import { PoolCard } from '@/components/tournoi/PoolCard';
+import { ScoreModal } from '@/components/tournoi/ScoreModal';
+import { StatusBadge, TournoiCard } from '@/components/tournoi/TournoiCard';
+import { Btn, IconBtn } from '@/components/ui/Btn';
+import { Empty, Loader } from '@/components/ui/Empty';
+import { Fab } from '@/components/ui/Fab';
+import { Header } from '@/components/ui/Header';
+import { Screen } from '@/components/ui/Screen';
+import { Segmented, type SegOpt } from '@/components/ui/Segmented';
+import { C, gs, sp, txt } from '@/constants/theme';
+import { hasBye, played, plural, poolKeys, poolMatchs, useTournoi, useTournois, type Tab } from '@/hooks/useTournoi';
+import type { Match, Tournoi } from '@/types';
 
-const API_URL = "https://pingmaster-api.onrender.com/"; // Remplacer par ton IP
+const OFFLINE = {
+  icon: 'cloud-offline-outline',
+  title: 'Serveur injoignable',
+  sub: 'Tirez vers le bas pour réessayer.',
+} as const;
 
-export default function TournamentScreen() {
-  const [tournois, setTournois] = useState([]);
-  const [activeTournoi, setActiveTournoi] = useState<any>(null);
-  const [participants, setParticipants] = useState([]);
-  const [poules, setPoules] = useState<any>(null);
-  
-  const [modalCreateVisible, setModalCreateVisible] = useState(false);
-  const [modalAddPlayerVisible, setModalAddPlayerVisible] = useState(false);
-  const [modalScoreVisible, setModalScoreVisible] = useState(false);
-  
-  const [newTournoiName, setNewTournoiName] = useState("");
-  const [nbTables, setNbTables] = useState("4");
-  const [inviteName, setInviteName] = useState("");
-  const [invitePoints, setInvitePoints] = useState("500");
-  const [loading, setLoading] = useState(false);
-  
-  // Correction du '0' : On initialise en chaîne vide
-  const [selectedMatch, setSelectedMatch] = useState<any>(null);
-  const [scoreJ1, setScoreJ1] = useState("");
-  const [scoreJ2, setScoreJ2] = useState("");
+const NONE = {
+  icon: 'trophy-outline',
+  title: 'Aucun tournoi',
+  sub: 'Créez le premier tournoi du club avec le bouton +.',
+} as const;
 
-  useFocusEffect(useCallback(() => { fetchTournois(); }, []));
+const pull = (refreshing: boolean, onRefresh: () => void) => (
+  <RefreshControl
+    refreshing={refreshing}
+    onRefresh={onRefresh}
+    tintColor={C.primary}
+    colors={[C.primary]}
+    progressBackgroundColor={C.bgCard}
+  />
+);
 
-  const fetchTournois = async () => {
-    try {
-      const res = await fetch(`${API_URL}/tournois`);
-      setTournois(await res.json());
-    } catch(e) {}
-  };
+export default function TournoiScreen() {
+  const { list, isLoad, isReady, err, refresh, create, isSaving } = useTournois();
+  const [sel, setSel] = useState<Tournoi | null>(null);
+  const [isNew, setNew] = useState(false);
 
-  const createTournoi = async () => {
-    if (!newTournoiName) return;
-    await fetch(`${API_URL}/tournois`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ nom: newTournoiName, nb_tables: parseInt(nbTables) })
-    });
-    setModalCreateVisible(false);
-    fetchTournois();
-  };
+  const back = useCallback(() => {
+    setSel(null);
+    refresh(true);
+  }, [refresh]);
 
-  const openTournoi = async (t: any) => {
-      setActiveTournoi(t);
-      if (t.status === 'inscription') fetchParticipants(t.id);
-      else fetchPoules(t.id);
-  };
-
-  const fetchParticipants = async (id: number) => {
-      const res = await fetch(`${API_URL}/tournois/${id}/participants`);
-      setParticipants(await res.json());
-  };
-  
-  const fetchPoules = async (id: number, silent = false) => {
-      if (!silent) setLoading(true);
-      try {
-          const res = await fetch(`${API_URL}/tournois/${id}/poules`);
-          setPoules(await res.json());
-      } catch(e) {}
-      if (!silent) setLoading(false);
-  };
-
-  const addParticipant = async () => {
-      if (!inviteName) return;
-      await fetch(`${API_URL}/tournois/inscription`, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ tournoi_id: activeTournoi.id, nom_invite: inviteName, points: parseInt(invitePoints) })
-      });
-      setModalAddPlayerVisible(false);
-      setInviteName("");
-      fetchParticipants(activeTournoi.id);
-  };
-
-  const lancerGeneration = async () => {
-      Alert.alert("Lancement", "Verrouiller les inscriptions et générer les poules ?", [
-          { text: "Annuler" },
-          { text: "Générer", onPress: async () => {
-              setLoading(true);
-              await fetch(`${API_URL}/tournois/${activeTournoi.id}/generation`, { method: 'POST' });
-              const updatedTournoi = { ...activeTournoi, status: 'poules' };
-              setActiveTournoi(updatedTournoi);
-              fetchPoules(updatedTournoi.id);
-          }}
-      ]);
-  };
-
-  const cloturerPoules = async () => {
-      Alert.alert("Fin des Poules", "Générer l'arbre final ?", [
-          { text: "Annuler" },
-          { text: "Générer Tableau", onPress: async () => {
-              setLoading(true);
-              await fetch(`${API_URL}/tournois/${activeTournoi.id}/cloture-poules`, {method:'POST'});
-              const updatedTournoi = { ...activeTournoi, status: 'tableau' };
-              setActiveTournoi(updatedTournoi);
-              fetchPoules(updatedTournoi.id);
-          }}
-      ]);
-  };
-
-  const openScoreModal = (match: any) => {
-      if (match.j1 === "Exempté" || match.j2 === "Exempté") return; // On ne joue pas contre un fantôme
-      setSelectedMatch(match);
-      setScoreJ1(match.s1 > 0 ? match.s1.toString() : "");
-      setScoreJ2(match.s2 > 0 ? match.s2.toString() : "");
-      setModalScoreVisible(true);
-  };
-
-  const validerScore = async () => {
-      if (!selectedMatch || !scoreJ1 || !scoreJ2) return;
-      await fetch(`${API_URL}/tournois/match`, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ match_id: selectedMatch.id, score1: parseInt(scoreJ1), score2: parseInt(scoreJ2) })
-      });
-      setModalScoreVisible(false);
-      fetchPoules(activeTournoi.id, true);
-  };
-
-  if (!activeTournoi) {
-      return (
-        <View style={styles.container}>
-            <Text style={styles.titre}>Tournois du Club</Text>
-            <FlatList
-                data={tournois}
-                keyExtractor={(item: any) => item.id.toString()}
-                renderItem={({item}) => (
-                    <TouchableOpacity style={styles.card} onPress={() => openTournoi(item)}>
-                        <View>
-                            <Text style={styles.cardTitle}>{item.nom}</Text>
-                            <Text style={styles.cardSub}>{item.date} • {item.nb_tables} Tables</Text>
-                        </View>
-                        <View style={[styles.badge, {backgroundColor: item.status === 'poules' ? '#e67e22' : '#27ae60'}]}>
-                            <Text style={{color:'white', fontSize:10, fontWeight:'bold'}}>{item.status.toUpperCase()}</Text>
-                        </View>
-                    </TouchableOpacity>
-                )}
-                ListEmptyComponent={<Text style={styles.empty}>Aucun tournoi.</Text>}
-            />
-            <TouchableOpacity style={styles.fab} onPress={() => setModalCreateVisible(true)}><Ionicons name="add" size={30} color="white" /></TouchableOpacity>
-
-            <Modal visible={modalCreateVisible} transparent={true} animationType="fade">
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalView}>
-                        <Text style={styles.modalTitle}>Nouveau Tournoi</Text>
-                        <TextInput style={styles.input} placeholder="Nom" value={newTournoiName} onChangeText={setNewTournoiName} />
-                        <TextInput style={styles.input} placeholder="Nombre de tables" keyboardType="numeric" value={nbTables} onChangeText={setNbTables} />
-                        <TouchableOpacity style={styles.btnValid} onPress={createTournoi}><Text style={styles.txtValid}>Créer</Text></TouchableOpacity>
-                        <TouchableOpacity onPress={() => setModalCreateVisible(false)}><Text style={styles.cancel}>Annuler</Text></TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
-        </View>
-      );
-  }
+  if (sel) return <Detail key={sel.id} t={sel} onBack={back} />;
 
   return (
-    <View style={styles.container}>
-        <View style={styles.header}>
-            <TouchableOpacity onPress={() => { setActiveTournoi(null); fetchTournois(); }}>
-                <Ionicons name="arrow-back" size={24} color="#2c3e50" />
-            </TouchableOpacity>
-            <View>
-                <Text style={styles.headerTitle}>{activeTournoi.nom}</Text>
-                <Text style={styles.headerSub}>{activeTournoi.status.toUpperCase()}</Text>
-            </View>
-            {activeTournoi.status === 'inscription' && (
-                <TouchableOpacity onPress={lancerGeneration}><Ionicons name="play-circle" size={34} color="#e74c3c" /></TouchableOpacity>
-            )}
-        </View>
-
-        {loading ? <ActivityIndicator size="large" color="#2c3e50" /> : (
-            <>
-                {activeTournoi.status === 'inscription' && (
-                    <>
-                        <FlatList
-                            data={participants}
-                            keyExtractor={(item: any) => item.id.toString()}
-                            ListHeaderComponent={<Text style={styles.sectionTitle}>{participants.length} INSCRITS</Text>}
-                            renderItem={({item, index}) => (
-                                <View style={styles.playerRow}>
-                                    <Text style={styles.rank}>#{index+1}</Text>
-                                    <Text style={styles.playerName}>{item.nom}</Text>
-                                    <Text style={styles.playerPts}>{item.points} pts</Text>
-                                </View>
-                            )}
-                        />
-                        <TouchableOpacity style={styles.fab} onPress={() => setModalAddPlayerVisible(true)}><Ionicons name="person-add" size={24} color="white" /></TouchableOpacity>
-                    </>
-                )}
-
-                {activeTournoi.status === 'poules' && poules && (
-                    <ScrollView>
-                        {Object.keys(poules).filter(k => k !== 'Tableau').sort().map((lettre) => (
-                            <View key={lettre} style={styles.pouleCard}>
-                                <View style={styles.pouleHeader}><Text style={styles.pouleTitle}>POULE {lettre}</Text></View>
-                                <View style={{backgroundColor:'#fdfefe', paddingBottom: 10}}>
-                                    {poules[lettre].joueurs.map((joueur: any, idx: number) => (
-                                        <View key={idx} style={styles.pouleRow}>
-                                            <Text style={{fontWeight:'bold', width: 20, color:'#bdc3c7'}}>{idx+1}.</Text>
-                                            <Text style={{flex:1, fontWeight:'600'}}>{joueur.nom}</Text>
-                                        </View>
-                                    ))}
-                                </View>
-                                <View style={{borderTopWidth:1, borderColor:'#eee'}}>
-                                    {poules[lettre].matchs.sort((a:any, b:any) => parseInt(a.tour) - parseInt(b.tour)).map((m: any, idx: number, arr: any[]) => {
-                                        const showTour = idx === 0 || m.tour !== arr[idx-1].tour;
-                                        return (
-                                            <View key={m.id}>
-                                                {showTour && <Text style={styles.tourLabel}>TOUR {m.tour}</Text>}
-                                                <TouchableOpacity style={[styles.matchRow, m.termine && {backgroundColor:'#f1f8e9'}]} onPress={() => openScoreModal(m)}>
-                                                    <Text style={[styles.matchPlayer, m.s1 > m.s2 && m.termine && styles.winner]}>{m.j1}</Text>
-                                                    <View style={styles.scoreBadge}>
-                                                        {m.termine ? <Text style={styles.scoreText}>{m.s1} - {m.s2}</Text> : <Text style={{fontSize:10, color:'white'}}>JOUER</Text>}
-                                                    </View>
-                                                    <Text style={[styles.matchPlayer, {textAlign:'right'}, m.s2 > m.s1 && m.termine && styles.winner]}>{m.j2}</Text>
-                                                </TouchableOpacity>
-                                            </View>
-                                        );
-                                    })}
-                                </View>
-                            </View>
-                        ))}
-                        <TouchableOpacity style={styles.btnCloture} onPress={cloturerPoules}>
-                            <Text style={{color:'white', fontWeight:'bold'}}>GÉNÉRER LE TABLEAU FINAL</Text>
-                        </TouchableOpacity>
-                    </ScrollView>
-                )}
-
-                {activeTournoi.status === 'tableau' && (
-                    <ScrollView contentContainerStyle={{paddingBottom: 50}}>
-                        {(!poules || !poules['Tableau']) ? (
-                            <ActivityIndicator color="#e74c3c" style={{marginTop: 50}} />
-                        ) : (
-                            <>
-                                <Text style={styles.sectionTitle}>PHASE FINALE</Text>
-                                {['1/8', '1/4', '1/2', 'Finale'].map((phase) => {
-                                    const matchsPhase = poules['Tableau'].matchs.filter((m:any) => m.tour === phase);
-                                    if (matchsPhase.length === 0) return null;
-                                    return (
-                                        <View key={phase} style={{marginBottom: 20}}>
-                                            <View style={styles.phaseHeader}><Text style={{color:'white', fontWeight:'bold'}}>{phase.toUpperCase()}</Text></View>
-                                            {matchsPhase.map((m:any) => (
-                                                <TouchableOpacity key={m.id} style={styles.treeMatch} onPress={() => openScoreModal(m)}>
-                                                    <View style={[styles.treePlayerBox, m.s1 > m.s2 && m.termine && {backgroundColor:'#dcedc8'}]}>
-                                                        <Text style={styles.treePlayerName}>{m.j1}</Text>
-                                                        <Text style={styles.treeScore}>{m.termine ? m.s1 : (m.j2 === 'Exempté' ? 'V' : '-')}</Text>
-                                                    </View>
-                                                    <View style={[styles.treePlayerBox, m.s2 > m.s1 && m.termine && {backgroundColor:'#dcedc8'}]}>
-                                                        <Text style={styles.treePlayerName}>{m.j2}</Text>
-                                                        <Text style={styles.treeScore}>{m.termine ? m.s2 : (m.j1 === 'Exempté' ? 'V' : '-')}</Text>
-                                                    </View>
-                                                </TouchableOpacity>
-                                            ))}
-                                        </View>
-                                    )
-                                })}
-                            </>
-                        )}
-                    </ScrollView>
-                )}
-            </>
-        )}
-
-        <Modal visible={modalAddPlayerVisible} transparent={true} animationType="slide">
-            <View style={styles.modalOverlay}>
-                <View style={styles.modalView}>
-                    <Text style={styles.modalTitle}>Ajout Manuel</Text>
-                    <TextInput style={styles.input} placeholder="Nom" value={inviteName} onChangeText={setInviteName} />
-                    <TextInput style={styles.input} placeholder="Points" keyboardType="numeric" value={invitePoints} onChangeText={setInvitePoints} />
-                    <TouchableOpacity style={styles.btnValid} onPress={addParticipant}><Text style={styles.txtValid}>Ajouter</Text></TouchableOpacity>
-                    <TouchableOpacity onPress={() => setModalAddPlayerVisible(false)}><Text style={styles.cancel}>Annuler</Text></TouchableOpacity>
-                </View>
-            </View>
-        </Modal>
-
-        <Modal visible={modalScoreVisible} transparent={true} animationType="fade">
-            <View style={styles.modalOverlay}>
-                <View style={styles.modalView}>
-                    <Text style={styles.modalTitle}>Résultat du Match</Text>
-                    <Text style={{textAlign:'center', marginBottom:20, color:'gray'}}>{selectedMatch?.j1} vs {selectedMatch?.j2}</Text>
-                    <View style={{flexDirection:'row', justifyContent:'center', alignItems:'center', marginBottom:20}}>
-                        <TextInput style={styles.scoreInput} keyboardType="numeric" value={scoreJ1} onChangeText={setScoreJ1} placeholder="0" maxLength={1}/>
-                        <Text style={{fontSize:20, marginHorizontal:10}}>-</Text>
-                        <TextInput style={styles.scoreInput} keyboardType="numeric" value={scoreJ2} onChangeText={setScoreJ2} placeholder="0" maxLength={1}/>
-                    </View>
-                    <TouchableOpacity style={styles.btnValid} onPress={validerScore}><Text style={styles.txtValid}>Valider le Score</Text></TouchableOpacity>
-                    <TouchableOpacity onPress={() => setModalScoreVisible(false)}><Text style={styles.cancel}>Annuler</Text></TouchableOpacity>
-                </View>
-            </View>
-        </Modal>
-    </View>
+    <Screen>
+      <Header caption="Compétitions" title="Tournois" />
+      <FlatList
+        data={list}
+        keyExtractor={t => String(t.id)}
+        renderItem={({ item }) => <TournoiCard t={item} onPress={() => setSel(item)} />}
+        contentContainerStyle={s.list}
+        refreshControl={pull(isLoad, () => refresh())}
+        ListEmptyComponent={isReady ? <Empty {...(err ? OFFLINE : NONE)} /> : <Loader />}
+      />
+      <Fab icon="add" onPress={() => setNew(true)} />
+      <CreateSheet visible={isNew} isLoad={isSaving} onClose={() => setNew(false)} onSubmit={create} />
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f3f5f7", padding: 15 },
-  titre: { fontSize: 24, fontWeight: 'bold', color: '#2c3e50', marginBottom: 20 },
-  card: { backgroundColor: 'white', padding: 20, borderRadius: 12, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 2 },
-  cardTitle: { fontWeight: 'bold', fontSize: 16, color: '#2c3e50' },
-  cardSub: { color: 'gray', fontSize: 12, marginTop: 2 },
-  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 5 },
-  empty: { textAlign: 'center', color: 'gray', marginTop: 50 },
-  fab: { position: 'absolute', bottom: 30, right: 30, backgroundColor: '#2c3e50', width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', elevation: 5 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, backgroundColor: 'white', padding: 15, borderRadius: 10 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#2c3e50' },
-  headerSub: { fontSize: 12, color: 'gray' },
-  sectionTitle: { fontWeight: 'bold', color: '#7f8c8d', marginBottom: 10 },
-  playerRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', padding: 15, marginBottom: 5, borderRadius: 8 },
-  rank: { width: 30, fontWeight: 'bold', color: '#bdc3c7' },
-  playerName: { flex: 1, fontSize: 16, fontWeight: '600', color: '#2c3e50' },
-  playerPts: { fontWeight: 'bold', color: '#3498db' },
-  pouleCard: { backgroundColor: 'white', borderRadius: 10, marginBottom: 15, overflow: 'hidden', elevation: 2 },
-  pouleHeader: { backgroundColor: '#34495e', padding: 10 },
-  pouleTitle: { color: 'white', fontWeight: 'bold', textAlign: 'center' },
-  pouleRow: { flexDirection: 'row', padding: 12, borderBottomWidth: 1, borderBottomColor: '#f1f2f6' },
-  tourLabel: { fontSize:10, fontWeight:'bold', color:'#e67e22', margin:10, marginLeft:5 },
-  matchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, borderBottomWidth: 1, borderBottomColor: '#f1f2f6' },
-  matchPlayer: { flex: 1, fontSize: 13, color: '#34495e' },
-  winner: { fontWeight: 'bold', color: '#27ae60' },
-  scoreBadge: { backgroundColor: '#3498db', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 5, minWidth: 50, alignItems: 'center' },
-  scoreText: { color: 'white', fontWeight: 'bold' },
-  btnCloture: { backgroundColor: '#2c3e50', margin: 15, padding: 15, borderRadius: 10, alignItems: 'center', elevation: 3 },
-  phaseHeader: { backgroundColor: '#34495e', padding: 8, borderRadius: 5, alignSelf: 'center', marginBottom: 10, paddingHorizontal: 20 },
-  treeMatch: { backgroundColor: 'white', borderRadius: 8, marginBottom: 10, elevation: 2, overflow: 'hidden', marginHorizontal: 10 },
-  treePlayerBox: { flexDirection: 'row', justifyContent: 'space-between', padding: 10, borderBottomWidth: 1, borderBottomColor: '#f1f2f6' },
-  treePlayerName: { fontWeight: 'bold', color: '#2c3e50' },
-  treeScore: { fontWeight: 'bold', color: '#e74c3c' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  modalView: { width: '80%', backgroundColor: 'white', padding: 20, borderRadius: 15 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 15, textAlign:'center' },
-  input: { backgroundColor: '#f1f2f6', padding: 12, borderRadius: 8, marginBottom: 15 },
-  btnValid: { backgroundColor: '#27ae60', padding: 12, borderRadius: 8, alignItems: 'center', marginBottom: 10 },
-  txtValid: { color: 'white', fontWeight: 'bold' },
-  cancel: { textAlign: 'center', color: 'gray' },
-  scoreInput: { backgroundColor: '#f1f2f6', width: 60, height: 60, borderRadius: 10, textAlign: 'center', fontSize: 24, fontWeight: 'bold' }
+function Detail({ t, onBack }: { t: Tournoi; onBack: () => void }) {
+  const {
+    status,
+    tab,
+    show,
+    parts,
+    poules,
+    isLoad,
+    err,
+    retry,
+    isRefresh,
+    reload,
+    busy,
+    addGuest,
+    addMember,
+    launch,
+    closePools,
+    updScore,
+  } = useTournoi(t);
+  const [match, setMatch] = useState<Match | null>(null);
+  const [isScore, setScore] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        onBack();
+        return true;
+      });
+      return () => sub.remove();
+    }, [onBack]),
+  );
+
+  const openScore = (m: Match) => {
+    if (hasBye(m)) return;
+    setMatch(m);
+    setScore(true);
+  };
+
+  const onScore = async (s1: number, s2: number) => {
+    if (match && (await updScore(match.id, s1, s2))) setScore(false);
+  };
+
+  const opts: SegOpt<Tab>[] = [
+    { key: 'inscrits', label: 'Inscrits', count: parts?.length },
+    { key: 'poules', label: 'Poules', disabled: status === 'inscription' },
+    { key: 'tableau', label: 'Tableau', disabled: status !== 'tableau' },
+  ];
+
+  const refresher = pull(isRefresh, reload);
+  const wait = <Wait isLoad={isLoad} err={err} onRetry={retry} />;
+
+  const body = () => {
+    if (tab === 'inscrits') {
+      if (!parts) return wait;
+      return (
+        <Inscrits
+          parts={parts}
+          isOpen={status === 'inscription'}
+          isAdd={busy === 'add'}
+          isGen={busy === 'gen'}
+          onMember={addMember}
+          onGuest={addGuest}
+          onLaunch={launch}
+          refresh={refresher}
+        />
+      );
+    }
+    if (!poules) return wait;
+    if (tab === 'poules') {
+      const all = poolMatchs(poules);
+      return (
+        <FlatList
+          data={poolKeys(poules)}
+          keyExtractor={k => k}
+          renderItem={({ item }) => (
+            <PoolCard letter={item} poule={poules[item]} onMatch={status === 'poules' ? openScore : undefined} />
+          )}
+          contentContainerStyle={s.body}
+          refreshControl={refresher}
+          ListEmptyComponent={<Empty icon="grid-outline" title="Aucune poule" sub="Aucun joueur n’a été réparti." />}
+          ListFooterComponent={
+            status === 'poules' ? (
+              <View style={s.foot}>
+                <Text style={[txt.caption, txt.num, s.mid]}>
+                  {played(all)}/{all.length} matchs joués
+                </Text>
+                <Btn
+                  label="Générer le tableau final"
+                  icon="git-network-outline"
+                  size="lg"
+                  onPress={closePools}
+                  isLoad={busy === 'close'}
+                />
+              </View>
+            ) : null
+          }
+        />
+      );
+    }
+    if (poules.Tableau) {
+      return (
+        <ScrollView refreshControl={refresher} contentContainerStyle={s.bracket}>
+          <BracketView matchs={poules.Tableau.matchs} onMatch={openScore} />
+        </ScrollView>
+      );
+    }
+    if (isLoad || err) return wait;
+    return (
+      <Empty
+        icon="git-network-outline"
+        title="Tableau indisponible"
+        sub="Le tableau final n’a pas encore été généré."
+      />
+    );
+  };
+
+  return (
+    <Screen>
+      <View style={s.head}>
+        <View style={[gs.row, s.top]}>
+          <IconBtn icon="chevron-back" onPress={onBack} label="Retour aux tournois" />
+          <View style={[gs.fill, s.titles]}>
+            <View style={[gs.row, s.meta]}>
+              <StatusBadge status={status} />
+              <Text style={[txt.caption, txt.num]} numberOfLines={1}>
+                {plural(t.nb_tables, 'table')}
+              </Text>
+            </View>
+            <Text style={txt.h1} numberOfLines={1}>
+              {t.nom}
+            </Text>
+          </View>
+        </View>
+        <Segmented opts={opts} value={tab} onChange={show} />
+      </View>
+      <Animated.View key={tab} entering={FadeIn.duration(180)} style={gs.fill}>
+        {body()}
+      </Animated.View>
+      <ScoreModal
+        match={match}
+        visible={isScore}
+        isLoad={busy === 'score'}
+        onClose={() => setScore(false)}
+        onSubmit={onScore}
+      />
+    </Screen>
+  );
+}
+
+function Wait({ isLoad, err, onRetry }: { isLoad: boolean; err: string | null; onRetry: () => void }) {
+  if (isLoad || !err) return <Loader />;
+  return (
+    <Empty
+      icon="cloud-offline-outline"
+      title="Chargement impossible"
+      sub={err}
+      action={<Btn label="Réessayer" icon="refresh" variant="secondary" onPress={onRetry} />}
+    />
+  );
+}
+
+const s = StyleSheet.create({
+  list: { paddingHorizontal: sp.lg, paddingTop: sp.xs, paddingBottom: 96, gap: sp.md },
+  head: { paddingHorizontal: sp.lg, paddingTop: sp.sm, paddingBottom: sp.md, gap: sp.lg },
+  top: { gap: sp.md, minHeight: 48 },
+  titles: { gap: sp.xs },
+  meta: { gap: sp.sm },
+  body: { padding: sp.lg, gap: sp.lg, paddingBottom: sp.xxl },
+  bracket: { paddingTop: sp.lg, paddingBottom: sp.xxl },
+  foot: { gap: sp.md, paddingTop: sp.sm },
+  mid: { textAlign: 'center' },
 });

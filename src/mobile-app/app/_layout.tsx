@@ -1,39 +1,44 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import * as NavigationBar from 'expo-navigation-bar';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-import * as NavigationBar from 'expo-navigation-bar';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useEffect } from 'react';
-import { Platform } from "react-native";
+import { Platform } from 'react-native';
+import 'react-native-reanimated';
+import { C } from '@/constants/theme';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+const navTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: C.primary,
+    background: C.bgMain,
+    card: C.bgMain,
+    text: C.textMain,
+    border: C.divider,
+    notification: C.danger,
+  },
+};
 
+export default function RootLayout() {
   useEffect(() => {
-    // Si on est sur Android, on cache la barre
-    if (Platform.OS === 'android') { 
-      // "overlay-swipe" permet de la faire réapparaitre en glissant le doigt vers le haut
-      NavigationBar.setVisibilityAsync("hidden");
-      NavigationBar.setBehaviorAsync("overlay-swipe");
-      
-      // Optionnel : Rendre la barre transparente si elle apparait
-      NavigationBar.setBackgroundColorAsync("#ffffff00");
-    }
+    if (Platform.OS !== 'android') return;
+    NavigationBar.setVisibilityAsync('hidden');
+    NavigationBar.setBehaviorAsync('overlay-swipe');
+    NavigationBar.setBackgroundColorAsync('#ffffff00');
   }, []);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+    <ThemeProvider value={navTheme}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bgMain } }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
     </ThemeProvider>
   );
 }

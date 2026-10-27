@@ -1,117 +1,50 @@
-import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform } from 'react-native';
+import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { HapticTab } from '@/components/haptic-tab';
+import { C } from '@/constants/theme';
+import type { IconName } from '@/types';
+
+const TABS: { name: string; title: string; icon: IconName; on: IconName }[] = [
+  { name: 'index', title: 'Accueil', icon: 'home-outline', on: 'home' },
+  { name: 'tournoi', title: 'Tournoi', icon: 'trophy-outline', on: 'trophy' },
+  { name: 'stats', title: 'Stats', icon: 'stats-chart-outline', on: 'stats-chart' },
+  { name: 'settings', title: 'Réglages', icon: 'settings-outline', on: 'settings' },
+];
 
 export default function TabLayout() {
+  const { bottom } = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: '#2c3e50' },
-        headerTintColor: '#fff',
+        headerShown: false,
+        tabBarButton: HapticTab,
+        tabBarHideOnKeyboard: true,
+        tabBarActiveTintColor: C.primary,
+        tabBarInactiveTintColor: C.textMuted,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopWidth: 0,
-          elevation: 10,
-          height: Platform.OS === 'ios' ? 90 : 70, 
-          paddingBottom: Platform.OS === 'ios' ? 30 : 12,
-          paddingTop: 10,
+          backgroundColor: C.bgMain,
+          borderTopColor: C.divider,
+          borderTopWidth: 1,
+          elevation: 0,
+          height: 60 + bottom,
+          paddingTop: 6,
+          paddingBottom: bottom + 6,
         },
-        tabBarActiveTintColor: '#e74c3c',
-        tabBarInactiveTintColor: '#95a5a6',
-        tabBarLabelStyle: { fontWeight: 'bold', fontSize: 10, marginBottom: 5 },
+        sceneStyle: { backgroundColor: C.bgMain },
       }}
     >
-      {/* 1. VESTIAIRES */}
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Vestiaires",
-          tabBarLabel: "ACTUALITÉS",
-          tabBarIcon: ({ color, size }) => <Ionicons name="newspaper" size={24} color={color} />,
-        }}
-      />
-
-      {/* 2. CALENDRIER */}
-      <Tabs.Screen
-        name="events"
-        options={{
-          title: "Agenda Club",
-          tabBarLabel: "CALENDRIER",
-          tabBarIcon: ({ color, size }) => <Ionicons name="calendar" size={24} color={color} />,
-        }}
-      />
-
-      <Tabs.Screen
-        name="tournoi"
-        options={{
-          title: "Tournois",
-          tabBarLabel: "TOURNOI",
-          tabBarIcon: ({ color, size }) => <Ionicons name="trophy" size={24} color={color} />,
-        }}
-      />
-
-      {/* 3. ÉQUIPE (On le remet !) */}
-      <Tabs.Screen
-        name="equipe"
-        options={{
-          title: "Effectif Club",
-          tabBarLabel: "ÉQUIPE",
-          tabBarIcon: ({ color, size }) => <Ionicons name="people" size={24} color={color} />,
-        }}
-      />
-
-      {/* STATS (Assiduité) */}
-      <Tabs.Screen
-        name="stats"
-        options={{
-          title: "Stats Club",
-          tabBarLabel: "STATS",
-          tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart" size={24} color={color} />,
-        }}
-      />
-
-      {/* 4. MAILLOT */}
-      <Tabs.Screen
-        name="maillot"
-        options={{
-          title: "Boutique",
-          tabBarLabel: "MAILLOT",
-          tabBarIcon: ({ color, size }) => <Ionicons name="shirt" size={24} color={color} />,
-        }}
-      />
-
-      {/* MESSAGERIE */}
-      <Tabs.Screen
-        name="chat"
-        options={{
-          title: "Discussion",
-          tabBarLabel: "CHAT",
-          tabBarIcon: ({ color, size }) => <Ionicons name="chatbubbles" size={24} color={color} />,
-        }}
-      />
-
-      <Tabs.Screen
-        name="scoreboard"
-        options={{
-          title: "Arbitrage",
-          tabBarLabel: "LIVE",
-          tabBarIcon: ({ color, size }) => <Ionicons name="play-circle" size={24} color={color} />,
-        }}
-      />
-
-      {/* 4. PARAMÈTRES (En dernier) */}
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: "Mon Compte",
-          tabBarLabel: "RÉGLAGES",
-          tabBarIcon: ({ color, size }) => <Ionicons name="settings" size={24} color={color} />,
-        }}
-      />
-
-      {/* Pages Cachées */}
-      <Tabs.Screen name="add-player" options={{ href: null }} />
-      <Tabs.Screen name="match" options={{ href: null }} /> 
+      {TABS.map(t => (
+        <Tabs.Screen
+          key={t.name}
+          name={t.name}
+          options={{
+            title: t.title,
+            tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? t.on : t.icon} size={22} color={color} />,
+          }}
+        />
+      ))}
     </Tabs>
   );
 }

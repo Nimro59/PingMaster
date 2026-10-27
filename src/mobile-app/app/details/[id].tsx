@@ -1,154 +1,144 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Dimensions, ScrollView } from 'react-native';
-import { useLocalSearchParams, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
+import { Badge } from '@/components/ui/Badge';
+import { Btn } from '@/components/ui/Btn';
+import { Card } from '@/components/ui/Card';
+import { Empty, Loader } from '@/components/ui/Empty';
+import { Header } from '@/components/ui/Header';
+import { Screen } from '@/components/ui/Screen';
+import { C, gs, rad, sp, tone, txt, type Tone } from '@/constants/theme';
+import { useHisto } from '@/hooks/useHisto';
+import type { Historique, IconName } from '@/types';
 
-const API_URL = "https://pingmaster-api.onrender.com/";
-const SCREEN_WIDTH = Dimensions.get("window").width;
+type Stat = { label: string; value: string; icon: IconName; t?: Tone; sub: string };
 
-export default function PlayerProfile() {
-  const { id } = useLocalSearchParams(); 
-  
-  const [dataGraph, setDataGraph] = useState<number[]>([]);
-  const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+const toStats = ({ ratio, total_matchs, victoires, defaites, best_perf, worst_contre }: Historique['stats']): Stat[] => [
+  { label: 'Victoires', value: `${ratio}%`, icon: 'trophy-outline', t: 'success', sub: 'Taux de victoire' },
+  { label: 'Matchs', value: `${total_matchs}`, icon: 'tennisball-outline', sub: `${victoires} V · ${defaites} D` },
+  { label: 'Best perf', value: `+${best_perf}`, icon: 'trending-up', t: 'accent', sub: 'Gain max. / match' },
+  { label: 'Pire contre', value: `-${worst_contre}`, icon: 'trending-down', t: 'danger', sub: 'Perte max. / match' },
+];
 
-  useEffect(() => {
-    if (id) fetchDetails();
-  }, [id]);
+const chartCfg = {
+  backgroundGradientFrom: C.bgCard,
+  backgroundGradientTo: C.bgCard,
+  fillShadowGradientFrom: C.primary,
+  fillShadowGradientFromOpacity: 0.3,
+  fillShadowGradientTo: C.primary,
+  fillShadowGradientToOpacity: 0,
+  decimalPlaces: 0,
+  color: (o = 1) => `rgba(59, 130, 246, ${o})`,
+  labelColor: () => C.textSub,
+  propsForDots: { r: '3', strokeWidth: '2', stroke: C.primary },
+  propsForBackgroundLines: { stroke: C.border, strokeDasharray: '4 6' },
+};
 
-  const fetchDetails = async () => {
-    try {
-      const response = await fetch(`${API_URL}/joueur/${id}/historique`);
-      const json = await response.json();
-      
-      // json contient maintenant { stats: {...}, courbe: [...] }
-      setStats(json.stats);
-      
-      const points = json.courbe.map((h: any) => h.points);
-      setDataGraph(points);
-      
-      setLoading(false);
-    } catch (error) {
-      console.error(error);
-      setLoading(false);
-    }
-  };
+export default function PlayerScreen() {
+  const { id, nom } = useLocalSearchParams<{ id: string; nom?: string }>();
+  const { histo, pts, cur, delta, isLoad, err, retry, isRefresh, refresh } = useHisto(id);
+  const [chartW, setChartW] = useState(0);
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Stack.Screen options={{ title: "Analyse Joueur", headerBackTitle: "Retour" }} />
-
-      {loading ? (
-        <ActivityIndicator size="large" color="#2c3e50" style={{marginTop: 50}} />
+    <Screen edges={['top', 'bottom']}>
+      <Header back caption="Profil joueur" title={nom || 'Analyse joueur'} />
+      {isLoad ? (
+        <Loader />
+      ) : !histo ? (
+        <Empty
+          icon="cloud-offline-outline"
+          title="Historique indisponible"
+          sub={err ?? undefined}
+          action={<Btn label="Réessayer" icon="refresh" variant="secondary" onPress={retry} />}
+        />
       ) : (
-        <>
-            {/* 1. GRILLE DE STATS (MONEYBALL) */}
-            <View style={styles.gridContainer}>
-                
-                {/* Ratio Victoire */}
-                <View style={[styles.statBox, { backgroundColor: '#e8f8f5' }]}>
-                    <Text style={styles.statLabel}>Victoires</Text>
-                    <Text style={[styles.statValue, { color: '#27ae60' }]}>
-                        {stats?.ratio}%
-                    </Text>
-                </View>
-
-                {/* Total Matchs */}
-                <View style={styles.statBox}>
-                    <Text style={styles.statLabel}>Matchs</Text>
-                    <Text style={styles.statValue}>{stats?.total_matchs}</Text>
-                </View>
-
-                {/* Meilleure Perf */}
-                <View style={styles.statBox}>
-                    <Text style={styles.statLabel}>Best Perf</Text>
-                    <Text style={[styles.statValue, { color: '#2980b9' }]}>
-                        +{stats?.best_perf}
-                    </Text>
-                </View>
-
-                {/* Pire Contre */}
-                <View style={[styles.statBox, { backgroundColor: '#fdedec' }]}>
-                    <Text style={styles.statLabel}>Pire Contre</Text>
-                    <Text style={[styles.statValue, { color: '#c0392b' }]}>
-                        -{stats?.worst_contre}
-                    </Text>
-                </View>
+        <ScrollView
+          contentContainerStyle={s.body}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefresh}
+              onRefresh={refresh}
+              tintColor={C.primary}
+              colors={[C.primary]}
+              progressBackgroundColor={C.bgCard}
+            />
+          }
+        >
+          <View style={s.grid}>
+            {toStats(histo.stats).map(st => (
+              <Tile key={st.label} {...st} />
+            ))}
+          </View>
+          <Card>
+            <View style={[gs.between, s.chartHead]}>
+              <View style={gs.fill}>
+                <Text style={txt.h2}>Progression</Text>
+                {cur !== null && <Text style={[txt.sub, txt.num]}>{Math.round(cur)} pts actuels</Text>}
+              </View>
+              {pts.length > 1 && (
+                <Badge
+                  label={`${delta > 0 ? '+' : ''}${delta} pts`}
+                  tone={delta > 0 ? 'success' : delta < 0 ? 'danger' : 'muted'}
+                />
+              )}
             </View>
-
-
-            {/* 2. GRAPHIQUE */}
-            <Text style={styles.sectionTitle}>Progression</Text>
-            {dataGraph.length > 0 ? (
-                <View style={styles.chartContainer}>
-                    <LineChart
-                        data={{
-                            labels: [], 
-                            datasets: [{ data: dataGraph }]
-                        }}
-                        width={SCREEN_WIDTH - 40}
-                        height={220}
-                        yAxisSuffix=""
-                        chartConfig={{
-                            backgroundColor: "#fff",
-                            backgroundGradientFrom: "#fff",
-                            backgroundGradientTo: "#fff",
-                            decimalPlaces: 0,
-                            color: (opacity = 1) => `rgba(44, 62, 80, ${opacity})`,
-                            labelColor: (opacity = 1) => `rgba(127, 140, 141, ${opacity})`,
-                            propsForDots: { r: "3", strokeWidth: "1", stroke: "#2c3e50" }
-                        }}
-                        bezier
-                        style={{ marginVertical: 8, borderRadius: 16 }}
-                    />
-                </View>
+            {pts.length > 1 ? (
+              <View onLayout={e => setChartW(e.nativeEvent.layout.width)}>
+                {chartW > 0 && (
+                  <LineChart
+                    data={{ labels: [], datasets: [{ data: pts }] }}
+                    width={chartW}
+                    height={220}
+                    chartConfig={chartCfg}
+                    bezier
+                    style={s.chart}
+                  />
+                )}
+              </View>
             ) : (
-                <Text style={styles.info}>Pas assez de données pour le graphique.</Text>
+              <Text style={[txt.sub, s.none]}>Pas assez de données pour le graphique.</Text>
             )}
-        </>
+          </Card>
+        </ScrollView>
       )}
-    </ScrollView>
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: 15, backgroundColor: '#f5f6fa', minHeight: '100%' },
-  
-  // Styles de la grille
-  gridContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between',
-      marginBottom: 20,
-  },
-  statBox: {
-      width: '48%', // Pour avoir 2 carrés par ligne
-      backgroundColor: 'white',
-      padding: 15,
-      borderRadius: 12,
-      marginBottom: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
-      elevation: 2, // Ombre Android
-      shadowColor: "#000", // Ombre iOS
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 3,
-  },
-  statLabel: {
-      fontSize: 14,
-      color: '#7f8c8d',
-      fontWeight: '600',
-      marginBottom: 5,
-  },
-  statValue: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      color: '#2c3e50',
-  },
+function Tile({ label, value, icon, t, sub }: Stat) {
+  const { fg, bg } = tone[t ?? 'muted'];
+  return (
+    <Card style={s.tile}>
+      <View style={[s.bubble, { backgroundColor: bg }]}>
+        <Ionicons name={icon} size={16} color={fg} />
+      </View>
+      <Text style={txt.caption}>{label}</Text>
+      <Text style={[txt.h1, s.val, txt.num, !!t && { color: fg }]} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+      </Text>
+      <Text style={[txt.sub, txt.num]} numberOfLines={1}>
+        {sub}
+      </Text>
+    </Card>
+  );
+}
 
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#2c3e50', marginBottom: 10, marginTop: 10, marginLeft: 5 },
-  chartContainer: { alignItems: 'center', backgroundColor: 'white', padding: 5, borderRadius: 15, elevation: 2 },
-  info: { textAlign: 'center', color: 'gray', marginTop: 20 },
+const s = StyleSheet.create({
+  body: { paddingHorizontal: sp.lg, paddingTop: sp.xs, paddingBottom: sp.xxl, gap: sp.lg },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: sp.md },
+  tile: { flexBasis: '45%', flexGrow: 1 },
+  bubble: {
+    width: 32,
+    height: 32,
+    borderRadius: rad.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: sp.md,
+  },
+  val: { fontSize: 28, marginVertical: sp.xs },
+  chartHead: { gap: sp.md, marginBottom: sp.md },
+  chart: { borderRadius: rad.md },
+  none: { textAlign: 'center', paddingVertical: sp.xl },
 });

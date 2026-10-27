@@ -1,132 +1,151 @@
-import React, { useState, useCallback } from "react";
-import { Text, View, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Modal, TextInput, Alert } from "react-native";
-import { useFocusEffect } from "expo-router";
-import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { CheckInCard } from '@/components/club/CheckInCard';
+import { EventRow } from '@/components/club/EventRow';
+import { IdentitySheet } from '@/components/club/IdentitySheet';
+import { NextEvent } from '@/components/club/NextEvent';
+import { PostCard } from '@/components/club/PostCard';
+import { ServerStatus } from '@/components/club/ServerStatus';
+import { Btn, IconBtn } from '@/components/ui/Btn';
+import { Empty, Loader } from '@/components/ui/Empty';
+import { Fab } from '@/components/ui/Fab';
+import { Header } from '@/components/ui/Header';
+import { Screen } from '@/components/ui/Screen';
+import { Segmented } from '@/components/ui/Segmented';
+import { C, sp } from '@/constants/theme';
+import { useCheckIn } from '@/hooks/useCheckIn';
+import { useFeed, type Agenda } from '@/hooks/useFeed';
+import { usePlayers } from '@/hooks/usePlayers';
+import { useProfile } from '@/hooks/useProfile';
+import { useServer } from '@/hooks/useServer';
+import type { Post } from '@/types';
 
-const API_URL = "https://pingmaster-api.onrender.com/"; 
+type Tab = 'feed' | 'agenda';
+type Row = { key: string; post: Post } | { key: string; evt: Agenda };
 
-type Post = {
-  id: number;
-  auteur: string;
-  date: string;
-  titre: string;
-  contenu: string;
-  type?: string;
-};
+const EMPTY = {
+  feed: {
+    icon: 'megaphone-outline',
+    title: 'Aucune annonce pour le moment.',
+    sub: 'Les annonces du club apparaîtront ici.',
+  },
+  agenda: {
+    icon: 'calendar-outline',
+    title: 'Aucun événement prévu.',
+    sub: 'Ajoutez un entraînement, un match ou une réunion avec le bouton +.',
+  },
+} as const;
 
-export default function Vestiaires() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
+const Gap = () => <View style={s.gap} />;
 
-  // Formulaire nouveau post
-  const [titre, setTitre] = useState("");
-  const [contenu, setContenu] = useState("");
+export default function Home() {
+  const router = useRouter();
+  const { club, me, setMe } = useProfile();
+  const { list: players, isReady: isPlayersReady } = usePlayers();
+  const { srv, ping } = useServer();
+  const { posts, agenda, next, isRefresh, status, reload } = useFeed();
+  const { isDone, isPick, checkIn, pick, closePick } = useCheckIn(me, setMe);
+  const [tab, setTab] = useState<Tab>('feed');
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchPosts();
-    }, [])
+  const mine = players.find(j => j.id === me);
+
+  const rows = useMemo<Row[]>(
+    () =>
+      tab === 'feed'
+        ? posts.map(post => ({ key: `p${post.id}`, post }))
+        : agenda.map(evt => ({ key: `e${evt.id}`, evt })),
+    [tab, posts, agenda],
   );
 
-  const fetchPosts = async () => {
-    try {
-      const response = await fetch(`${API_URL}/vestiaire`);
-      const data = await response.json();
-      setPosts(data);
-      setRefreshing(false);
-    } catch (error) {
-      console.error(error);
-      setRefreshing(false);
-    }
+  const onRefresh = () => {
+    ping();
+    reload();
   };
-
-  const publierPost = async () => {
-    if (!titre || !contenu) return;
-    
-    try {
-      await fetch(`${API_URL}/vestiaire`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            auteur: "Coach", // Pour l'instant en dur, plus tard via compte
-            titre: titre,
-            contenu: contenu,
-            type: "info"
-        })
-      });
-      setModalVisible(false);
-      setTitre("");
-      setContenu("");
-      fetchPosts(); // On recharge la liste
-    } catch (e) {
-        Alert.alert("Erreur", "Impossible de publier");
-    }
-  };
-
-  const renderPost = ({ item }: { item: Post }) => (
-    <View style={styles.card}>
-      <View style={styles.headerPost}>
-        <Ionicons name="person-circle" size={40} color="#34495e" />
-        <View style={{marginLeft: 10}}>
-            <Text style={styles.auteur}>{item.auteur}</Text>
-            <Text style={styles.date}>{item.date}</Text>
-        </View>
-      </View>
-      <Text style={styles.titrePost}>{item.titre}</Text>
-      <Text style={styles.contenu}>{item.contenu}</Text>
-    </View>
-  );
 
   return (
-    <View style={styles.container}>
-      {/* Liste des posts */}
-      <FlatList
-        data={posts}
-        renderItem={renderPost}
-        keyExtractor={item => item.id.toString()}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchPosts} />}
-        ListHeaderComponent={<Text style={styles.pageTitle}>📢 Vestiaires</Text>}
-        ListEmptyComponent={<Text style={styles.empty}>Aucune annonce pour le moment.</Text>}
+    <Screen>
+      <Header
+        caption={<ServerStatus srv={srv} />}
+        title={club?.nom ?? 'PingMaster'}
+        right={
+          <>
+            <IconBtn icon="radio-outline" label="Live" onPress={() => router.push('/scoreboard')} />
+            <IconBtn icon="chatbubbles-outline" label="Discussion" onPress={() => router.push('/chat')} />
+          </>
+        }
       />
-
-      {/* Bouton Flottant (+) pour ajouter un post */}
-      <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
-        <Ionicons name="add" size={30} color="white" />
-      </TouchableOpacity>
-
-      {/* Modal de création */}
-      <Modal visible={modalVisible} animationType="slide" transparent={true}>
-        <View style={styles.modalView}>
-            <Text style={styles.modalTitle}>Nouvelle Annonce</Text>
-            <TextInput style={styles.input} placeholder="Titre (ex: Match ce weekend)" value={titre} onChangeText={setTitre} />
-            <TextInput style={[styles.input, {height: 100}]} placeholder="Message..." multiline value={contenu} onChangeText={setContenu} />
-            
-            <View style={styles.modalButtons}>
-                <TouchableOpacity onPress={() => setModalVisible(false)}><Text style={styles.cancel}>Annuler</Text></TouchableOpacity>
-                <TouchableOpacity onPress={publierPost}><Text style={styles.publish}>Publier</Text></TouchableOpacity>
-            </View>
-        </View>
-      </Modal>
-    </View>
+      <FlatList
+        data={rows}
+        keyExtractor={r => r.key}
+        renderItem={({ item }) => ('post' in item ? <PostCard post={item.post} /> : <EventRow evt={item.evt} />)}
+        ItemSeparatorComponent={Gap}
+        ListHeaderComponent={
+          <View style={s.head}>
+            <CheckInCard
+              name={mine && `${mine.prenom} ${mine.nom}`}
+              isLinked={!!me}
+              isDone={isDone}
+              onPress={checkIn}
+            />
+            {!!next && <NextEvent evt={next} />}
+            <Segmented
+              opts={[
+                { key: 'feed', label: 'Actualités', count: posts.length },
+                { key: 'agenda', label: 'Agenda', count: agenda.length },
+              ]}
+              value={tab}
+              onChange={setTab}
+            />
+          </View>
+        }
+        ListEmptyComponent={<ListState tab={tab} {...status[tab]} onRetry={onRefresh} />}
+        contentContainerStyle={s.list}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefresh}
+            onRefresh={onRefresh}
+            tintColor={C.primary}
+            colors={[C.primary]}
+            progressBackgroundColor={C.bgCard}
+          />
+        }
+      />
+      <Fab
+        icon="add"
+        onPress={() => router.push({ pathname: '/modal', params: { kind: tab === 'feed' ? 'post' : 'event' } })}
+      />
+      <IdentitySheet
+        visible={isPick}
+        players={players}
+        isLoad={!isPlayersReady}
+        onPick={pick}
+        onClose={closePick}
+      />
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f3f5f7", padding: 15 },
-  pageTitle: { fontSize: 28, fontWeight: 'bold', color: '#2c3e50', marginBottom: 20 },
-  card: { backgroundColor: 'white', borderRadius: 15, padding: 15, marginBottom: 15, elevation: 2 },
-  headerPost: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  auteur: { fontWeight: 'bold', fontSize: 16 },
-  date: { color: 'gray', fontSize: 12 },
-  titrePost: { fontSize: 18, fontWeight: 'bold', marginBottom: 5, color: '#2980b9' },
-  contenu: { fontSize: 15, lineHeight: 22, color: '#34495e' },
-  empty: { textAlign: 'center', marginTop: 50, color: 'gray' },
-  fab: { position: 'absolute', bottom: 30, right: 30, backgroundColor: '#e74c3c', width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', elevation: 5 },
-  modalView: { flex: 1, marginTop: 100, backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, elevation: 10 },
-  modalTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 20 },
-  input: { backgroundColor: '#f1f2f6', padding: 15, borderRadius: 10, marginBottom: 15 },
-  modalButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 },
-  publish: { fontSize: 18, fontWeight: 'bold', color: '#27ae60' },
-  cancel: { fontSize: 18, color: 'gray' }
+type StateProps = { tab: Tab; isReady: boolean; err: string | null; onRetry: () => void };
+
+function ListState({ tab, isReady, err, onRetry }: StateProps) {
+  if (!isReady) return <Loader />;
+  if (err) {
+    return (
+      <Empty
+        icon="cloud-offline-outline"
+        title="Chargement impossible"
+        sub={err}
+        action={<Btn label="Réessayer" icon="refresh" variant="secondary" onPress={onRetry} />}
+      />
+    );
+  }
+  return <Empty {...EMPTY[tab]} />;
+}
+
+const s = StyleSheet.create({
+  list: { paddingHorizontal: sp.lg, paddingBottom: sp.xxl * 3 },
+  head: { gap: sp.lg, marginBottom: sp.md },
+  gap: { height: sp.md },
 });
