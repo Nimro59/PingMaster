@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Dot } from '@/components/ui/Badge';
 import { Btn, IconBtn } from '@/components/ui/Btn';
 import { Header } from '@/components/ui/Header';
@@ -54,7 +54,7 @@ export default function Composer() {
       >
         <Segmented opts={KINDS} value={tab} onChange={setTab} />
       </Header>
-      <KeyboardAvoidingView style={gs.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={gs.fill} behavior="padding">
         <ScrollView contentContainerStyle={s.form} keyboardShouldPersistTaps="handled">
           <Input
             label="Titre"

@@ -84,7 +84,7 @@ export default function PlayerScreen() {
                 />
               )}
             </View>
-            {pts.length > 1 ? (
+            {pts.length > 0 ? (
               <View onLayout={e => setChartW(e.nativeEvent.layout.width)}>
                 {chartW > 0 && (
                   <LineChart

@@ -17,10 +17,16 @@ export const BYE = 'Exempté';
 const TAB_OF: Record<Statut, Tab> = { inscription: 'inscrits', poules: 'poules', tableau: 'tableau' };
 const ROUNDS = ['1/8', '1/4', '1/2', 'Finale'];
 
-export const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
 export const isDone = (m: Match) => !!m.termine;
 export const hasBye = (m: Match) => m.j1 === BYE || m.j2 === BYE;
-export const winnerOf = (m: Match) => (isDone(m) && m.s1 !== m.s2 ? (m.s1 > m.s2 ? m.j1 : m.j2) : null);
+export const winSide = (m: Match) => (isDone(m) ? Math.sign(m.s1 - m.s2) : 0);
+
+export function winnerOf(m: Match) {
+  const w = winSide(m);
+  if (!w) return null;
+  return w > 0 ? m.j1 : m.j2;
+}
+
 export const played = (matchs: Match[]) => matchs.filter(isDone).length;
 export const poolKeys = (poules: Poules) => Object.keys(poules).filter(k => k !== 'Tableau').sort();
 export const poolMatchs = (poules: Poules) => poolKeys(poules).flatMap(k => poules[k].matchs);

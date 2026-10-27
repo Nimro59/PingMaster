@@ -24,10 +24,10 @@ export function useChat() {
       setMsgs(data);
       setErr(null);
     } catch (e) {
+      if (cur.current !== clubId) return;
       setErr(errMsg(e));
-    } finally {
-      setReady(true);
     }
+    setReady(true);
   }, [clubId]);
 
   useFocusEffect(

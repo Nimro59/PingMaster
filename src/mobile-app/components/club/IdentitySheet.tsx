@@ -6,9 +6,9 @@ import { Empty, Loader } from '@/components/ui/Empty';
 import { Input } from '@/components/ui/Input';
 import { Sheet } from '@/components/ui/Sheet';
 import { C, gs, rad, sp, txt } from '@/constants/theme';
-import { fold } from '@/hooks/useFeed';
 import { byName } from '@/hooks/usePlayers';
 import type { Joueur } from '@/types';
+import { fold } from '@/utils/fmt';
 
 type Props = {
   visible: boolean;

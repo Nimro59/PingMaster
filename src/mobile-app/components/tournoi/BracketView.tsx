@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Empty } from '@/components/ui/Empty';
 import { C, gs, rad, sp, txt } from '@/constants/theme';
-import { BYE, hasBye, isDone, rounds, winnerOf } from '@/hooks/useTournoi';
+import { BYE, hasBye, isDone, rounds, winnerOf, winSide } from '@/hooks/useTournoi';
 import type { Match } from '@/types';
 
 type Props = {
@@ -56,11 +56,11 @@ export function BracketView({ matchs, onMatch }: Props) {
 
 function Box({ m, onPress }: { m: Match; onPress?: (m: Match) => void }) {
   const isOver = isDone(m);
-  const winner = winnerOf(m);
+  const win = winSide(m);
   const isEdit = !!onPress && !hasBye(m);
   const lines = [
-    { key: 'j1', name: m.j1, score: isOver ? m.s1 : m.j2 === BYE ? 'V' : '-' },
-    { key: 'j2', name: m.j2, score: isOver ? m.s2 : m.j1 === BYE ? 'V' : '-' },
+    { key: 'j1', name: m.j1, isWin: win > 0, score: isOver ? m.s1 : m.j2 === BYE ? 'V' : '-' },
+    { key: 'j2', name: m.j2, isWin: win < 0, score: isOver ? m.s2 : m.j1 === BYE ? 'V' : '-' },
   ];
 
   return (
@@ -71,15 +71,14 @@ function Box({ m, onPress }: { m: Match; onPress?: (m: Match) => void }) {
       accessibilityLabel={`${m.j1} contre ${m.j2}`}
       style={({ pressed }) => [s.box, pressed && s.pressed]}
     >
-      {lines.map((line, i) => {
-        const isWin = line.name === winner;
-        const isBye = line.name === BYE;
+      {lines.map(({ key, name, isWin, score }, i) => {
+        const isBye = name === BYE;
         return (
-          <View key={line.key} style={[gs.row, s.line, i > 0 && s.sep, isWin && s.win]}>
+          <View key={key} style={[gs.row, s.line, i > 0 && s.sep, isWin && s.win]}>
             <Text style={[s.name, isWin && s.winTxt, isBye && s.bye]} numberOfLines={1}>
-              {line.name}
+              {name}
             </Text>
-            <Text style={[s.score, txt.num, isWin && s.winTxt, isBye && s.bye]}>{line.score}</Text>
+            <Text style={[s.score, txt.num, isWin && s.winTxt, isBye && s.bye]}>{score}</Text>
           </View>
         );
       })}

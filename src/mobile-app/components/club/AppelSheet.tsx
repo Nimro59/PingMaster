@@ -1,12 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useMemo } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '@/components/ui/Avatar';
-import { Btn, usePress } from '@/components/ui/Btn';
+import { Btn, IconBtn } from '@/components/ui/Btn';
 import { Empty, Loader } from '@/components/ui/Empty';
 import { Sheet } from '@/components/ui/Sheet';
-import { C, gs, rad, sp, tone, txt, type Tone } from '@/constants/theme';
+import { C, gs, sp, tone, txt, type Tone } from '@/constants/theme';
 import { useAppel, type Presence } from '@/hooks/useAppel';
 import { byName, usePlayers } from '@/hooks/usePlayers';
 import type { IconName, Joueur } from '@/types';
@@ -97,22 +95,19 @@ function Row({ j, statut, onMark }: { j: Joueur; statut?: Presence; onMark: Rost
 }
 
 function Mark({ icon, t, label, isOn, onPress }: MarkProps) {
-  const press = usePress(0.9);
   const { fg, bg } = tone[t];
   return (
-    <Animated.View style={press.style}>
-      <Pressable
-        onPress={onPress}
-        onPressIn={press.onPressIn}
-        onPressOut={press.onPressOut}
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        accessibilityState={{ selected: isOn }}
-        style={[s.mark, { backgroundColor: isOn ? fg : bg, borderColor: isOn ? fg : C.border }]}
-      >
-        <Ionicons name={icon} size={20} color={isOn ? C.white : fg} />
-      </Pressable>
-    </Animated.View>
+    <IconBtn
+      icon={icon}
+      size={44}
+      iconSize={20}
+      color={isOn ? C.white : fg}
+      bg={isOn ? fg : bg}
+      border={isOn ? fg : C.border}
+      label={label}
+      selected={isOn}
+      onPress={onPress}
+    />
   );
 }
 
@@ -121,13 +116,5 @@ const Sep = () => <View style={s.sep} />;
 const s = StyleSheet.create({
   row: { gap: sp.md, paddingVertical: sp.md },
   sep: { height: StyleSheet.hairlineWidth, backgroundColor: C.border },
-  mark: {
-    width: 44,
-    height: 44,
-    borderRadius: rad.full,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   done: { marginTop: sp.md },
 });

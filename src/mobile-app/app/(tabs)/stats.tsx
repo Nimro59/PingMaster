@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { FlatList, ListRenderItemInfo, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Keyboard, ListRenderItemInfo, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { PlayerRow, rowLayout } from '@/components/club/PlayerRow';
 import { Podium } from '@/components/club/Podium';
 import { Btn, IconBtn } from '@/components/ui/Btn';
@@ -28,8 +28,10 @@ export default function StatsScreen() {
   const isSearch = !!q.trim();
 
   const open = useCallback(
-    (j: Joueur) =>
-      router.push({ pathname: '/details/[id]', params: { id: String(j.id), nom: `${j.prenom} ${j.nom}` } }),
+    (j: Joueur) => {
+      Keyboard.dismiss();
+      router.push({ pathname: '/details/[id]', params: { id: String(j.id), nom: `${j.prenom} ${j.nom}` } });
+    },
     [router],
   );
 

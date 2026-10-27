@@ -8,18 +8,19 @@ type Props = {
   title: string;
   caption?: ReactNode;
   back?: boolean;
+  onBack?: () => void;
   right?: ReactNode;
   children?: ReactNode;
 };
 
-export function Header({ title, caption, back, right, children }: Props) {
+export function Header({ title, caption, back, onBack, right, children }: Props) {
   const router = useRouter();
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   return (
     <View style={s.wrap}>
       <View style={[gs.row, s.top]}>
-        {back && <IconBtn icon="chevron-back" onPress={goBack} label="Retour" />}
+        {back && <IconBtn icon="chevron-back" onPress={onBack ?? goBack} label="Retour" />}
         <View style={gs.fill}>
           {typeof caption === 'string' ? (
             <Text style={txt.caption} numberOfLines={1}>

@@ -67,7 +67,7 @@ const s = StyleSheet.create({
   rank: { width: 24, textAlign: 'center', fontWeight: '800' },
   mid: { flex: 1, gap: sp.xs },
   muted: { color: C.textMuted },
-  side: { width: 88, alignItems: 'flex-end', gap: sp.xs },
+  side: { minWidth: 88, alignItems: 'flex-end', gap: sp.xs },
   pts: { alignSelf: 'flex-end' },
   bar: { gap: sp.sm },
   line: { fontSize: 12, lineHeight: 14 },

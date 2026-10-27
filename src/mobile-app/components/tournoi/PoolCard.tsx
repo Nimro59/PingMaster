@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { MatchRow } from '@/components/tournoi/MatchRow';
+import { Card } from '@/components/ui/Card';
 import { C, gs, rad, sp, txt } from '@/constants/theme';
 import { played, standings, tours } from '@/hooks/useTournoi';
 import type { Match, Poule } from '@/types';
@@ -19,7 +20,7 @@ export function PoolCard({ letter, poule, onMatch }: Props) {
   const pct = matchs.length ? Math.round((done / matchs.length) * 100) : 0;
 
   return (
-    <View style={s.card}>
+    <Card pad={0} style={s.card}>
       <View style={s.head}>
         <View style={gs.between}>
           <Text style={[txt.caption, s.title]}>Poule {letter}</Text>
@@ -62,18 +63,12 @@ export function PoolCard({ letter, poule, onMatch }: Props) {
         </View>
       ))}
       {!matchs.length && <Text style={[txt.sub, s.none]}>Aucun match dans cette poule.</Text>}
-    </View>
+    </Card>
   );
 }
 
 const s = StyleSheet.create({
-  card: {
-    backgroundColor: C.bgCard,
-    borderRadius: rad.lg,
-    borderWidth: 1,
-    borderColor: C.border,
-    overflow: 'hidden',
-  },
+  card: { overflow: 'hidden' },
   head: { gap: sp.sm, paddingHorizontal: sp.lg, paddingVertical: sp.md, backgroundColor: C.bgElevated },
   title: { color: C.textMain, fontSize: 13, fontWeight: '800', letterSpacing: 1 },
   track: { height: 4, borderRadius: rad.full, backgroundColor: C.border, overflow: 'hidden' },

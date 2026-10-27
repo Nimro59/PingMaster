@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, StyleSheet, Text, View } from 'react-native';
 import { IconBtn } from '@/components/ui/Btn';
 import { Empty, Loader } from '@/components/ui/Empty';
 import { Header } from '@/components/ui/Header';
@@ -28,7 +28,7 @@ export default function ChatScreen() {
   return (
     <Screen edges={['top', 'bottom']}>
       <Header back caption={club?.nom ?? 'Club'} title="Discussion" />
-      <KeyboardAvoidingView style={gs.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={gs.fill} behavior="padding">
         <FlatList
           ref={ref}
           data={msgs}
@@ -53,7 +53,16 @@ export default function ChatScreen() {
             submitBehavior="submit"
             onSubmitEditing={send}
           />
-          <IconBtn icon="send" size={48} color={C.primary} label="Envoyer" onPress={send} disabled={!draft.trim()} />
+          <IconBtn
+            icon="send"
+            size={48}
+            color={C.white}
+            bg={C.primary}
+            border={C.primary}
+            label="Envoyer"
+            onPress={send}
+            disabled={!draft.trim()}
+          />
         </View>
       </KeyboardAvoidingView>
     </Screen>

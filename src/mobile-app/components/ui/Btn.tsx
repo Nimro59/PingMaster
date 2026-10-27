@@ -52,6 +52,7 @@ export function Btn({ label, onPress, variant = 'primary', size = 'md', icon, is
         onPressIn={press.onPressIn}
         onPressOut={press.onPressOut}
         disabled={disabled || isLoad}
+        hitSlop={isSm ? hit : undefined}
         accessibilityRole="button"
         accessibilityState={{ disabled: !!disabled, busy: !!isLoad }}
         style={[s.base, { height: height[size], backgroundColor: bg, borderColor: bd }, isSm && s.sm, disabled && s.off]}
@@ -76,12 +77,28 @@ type IconProps = {
   onPress?: () => void;
   label?: string;
   color?: string;
+  bg?: string;
+  border?: string;
   size?: number;
+  iconSize?: number;
   disabled?: boolean;
+  selected?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
-export function IconBtn({ icon, onPress, label, color = C.textMain, size = 40, disabled, style }: IconProps) {
+export function IconBtn({
+  icon,
+  onPress,
+  label,
+  color = C.textMain,
+  bg = C.bgCard,
+  border = C.border,
+  size = 40,
+  iconSize,
+  disabled,
+  selected,
+  style,
+}: IconProps) {
   const press = usePress(0.9);
   return (
     <Animated.View style={[press.style, style]}>
@@ -93,9 +110,14 @@ export function IconBtn({ icon, onPress, label, color = C.textMain, size = 40, d
         hitSlop={hit}
         accessibilityRole="button"
         accessibilityLabel={label}
-        style={[s.icon, { width: size, height: size, borderRadius: size / 2 }, disabled && s.off]}
+        accessibilityState={{ disabled: !!disabled, selected: !!selected }}
+        style={[
+          s.icon,
+          { width: size, height: size, borderRadius: size / 2, backgroundColor: bg, borderColor: border },
+          disabled && s.off,
+        ]}
       >
-        <Ionicons name={icon} size={Math.round(size * 0.5)} color={color} />
+        <Ionicons name={icon} size={iconSize ?? Math.round(size * 0.5)} color={color} />
       </Pressable>
     </Animated.View>
   );
@@ -115,11 +137,5 @@ const s = StyleSheet.create({
   off: { opacity: 0.4 },
   label: { fontSize: 15, fontWeight: '700', letterSpacing: 0.2 },
   labelSm: { fontSize: 13 },
-  icon: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: C.bgCard,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
+  icon: { alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
 });

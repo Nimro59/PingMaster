@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Badge } from '@/components/ui/Badge';
 import { C, rad, sp, txt } from '@/constants/theme';
-import { BYE, hasBye, isDone, winnerOf } from '@/hooks/useTournoi';
+import { BYE, hasBye, isDone, winSide } from '@/hooks/useTournoi';
 import type { Match } from '@/types';
 
 type Props = {
@@ -11,12 +11,12 @@ type Props = {
 
 export function MatchRow({ m, onPress }: Props) {
   const isOver = isDone(m);
-  const winner = winnerOf(m);
+  const win = winSide(m);
   const isEdit = !!onPress && !hasBye(m);
 
-  const tint = (name: string) => {
+  const tint = (name: string, isWin: boolean) => {
     if (name === BYE) return s.bye;
-    if (name === winner) return s.win;
+    if (isWin) return s.win;
     return isOver ? s.lose : null;
   };
 
@@ -28,7 +28,7 @@ export function MatchRow({ m, onPress }: Props) {
       accessibilityLabel={`${m.j1} contre ${m.j2}`}
       style={({ pressed }) => [s.row, pressed && s.pressed]}
     >
-      <Text style={[s.name, tint(m.j1)]} numberOfLines={1}>
+      <Text style={[s.name, tint(m.j1, win > 0)]} numberOfLines={1}>
         {m.j1}
       </Text>
       <View style={s.mid}>
@@ -42,7 +42,7 @@ export function MatchRow({ m, onPress }: Props) {
           <Badge label="À jouer" tone="primary" style={s.chip} />
         )}
       </View>
-      <Text style={[s.name, s.right, tint(m.j2)]} numberOfLines={1}>
+      <Text style={[s.name, s.right, tint(m.j2, win < 0)]} numberOfLines={1}>
         {m.j2}
       </Text>
     </Pressable>

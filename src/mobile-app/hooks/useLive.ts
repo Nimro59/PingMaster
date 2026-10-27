@@ -1,4 +1,4 @@
-import { usePreventRemove } from '@react-navigation/native';
+import { useNavigation, usePreventRemove } from '@react-navigation/native';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
@@ -14,6 +14,7 @@ type Board = { s1: number; s2: number; st1: number; st2: number; srv: number };
 const ZERO: Board = { s1: 0, s2: 0, st1: 0, st2: 0, srv: 1 };
 
 export function useLive() {
+  const nav = useNavigation();
   const [lives, setLives] = useState<Live[]>([]);
   const [wtt, setWtt] = useState<LiveWtt[]>([]);
   const [isReady, setReady] = useState(false);
@@ -101,22 +102,28 @@ export function useLive() {
     apply({ ...board, s1: 0, s2: 0, st1: board.st1 + (p === 1 ? 1 : 0), st2: board.st2 + (p === 2 ? 1 : 0) });
   };
 
-  const end = async () => {
+  const end = async (then?: () => void) => {
     try {
       await api.del(`/lives/${matchId}`);
       hap.ok();
       setArb(false);
       setBoard(ZERO);
+      then?.();
     } catch (e) {
       hap.err();
       Alert.alert('Erreur', errMsg(e));
     }
   };
 
-  const stop = () =>
-    Alert.alert('Fin du match', 'Arrêter la diffusion ?', [{ text: 'Non' }, { text: 'Oui, Arrêter', onPress: end }]);
+  const ask = (then?: () => void) =>
+    Alert.alert('Fin du match', 'Arrêter la diffusion ?', [
+      { text: 'Non' },
+      { text: 'Oui, Arrêter', onPress: () => end(then) },
+    ]);
 
-  usePreventRemove(isArb, stop);
+  const stop = () => ask();
+
+  usePreventRemove(isArb, ({ data }) => ask(() => nav.dispatch(data.action)));
 
   return {
     lives,

@@ -10,11 +10,12 @@ type Props = {
   icon: IconName;
   onPress: () => void;
   label?: string;
+  a11y?: string;
   color?: string;
   style?: StyleProp<ViewStyle>;
 };
 
-export function Fab({ icon, onPress, label, color = C.primary, style }: Props) {
+export function Fab({ icon, onPress, label, a11y, color = C.primary, style }: Props) {
   const press = usePress(0.94);
   return (
     <Animated.View style={[s.wrap, press.style, style]}>
@@ -26,7 +27,7 @@ export function Fab({ icon, onPress, label, color = C.primary, style }: Props) {
         onPressIn={press.onPressIn}
         onPressOut={press.onPressOut}
         accessibilityRole="button"
-        accessibilityLabel={label}
+        accessibilityLabel={label ?? a11y}
         style={[s.fab, !!label && s.ext, { backgroundColor: color, shadowColor: color }]}
       >
         <Ionicons name={icon} size={24} color={C.white} />

@@ -4,6 +4,10 @@ const JOURS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
 const pad = (n: number) => n.toString().padStart(2, '0');
 const num = (v?: string) => Number(v ?? 0);
 
+export const fold = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+export const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
+
 export const today = () => new Date().toISOString().split('T')[0];
 
 export const todayFr = () => {

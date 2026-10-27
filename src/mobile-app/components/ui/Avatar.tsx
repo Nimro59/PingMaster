@@ -3,15 +3,16 @@ import { C } from '@/constants/theme';
 
 const HUES = [C.primary, C.accent, C.live, C.success];
 
-export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
+export function Avatar({ name, size = 40 }: { name?: string | null; size?: number }) {
+  const n = name ?? '';
   const ini =
-    name
+    n
       .split(/\s+/)
       .filter(Boolean)
       .slice(0, 2)
       .map(w => w[0].toUpperCase())
       .join('') || '?';
-  const hue = HUES[[...name].reduce((h, c) => h + c.charCodeAt(0), 0) % HUES.length];
+  const hue = HUES[[...n].reduce((h, c) => h + c.charCodeAt(0), 0) % HUES.length];
 
   return (
     <View

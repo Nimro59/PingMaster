@@ -3,9 +3,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { C, gs, rad, sp, tone, txt, type Tone } from '@/constants/theme';
-import { plural } from '@/hooks/useTournoi';
 import type { Statut, Tournoi } from '@/types';
-import { dateLabel } from '@/utils/fmt';
+import { dateLabel, plural } from '@/utils/fmt';
 
 type Look = { label: string; tone: Tone; pulse?: boolean };
 

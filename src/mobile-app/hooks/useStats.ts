@@ -4,18 +4,13 @@ import type { Tone } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
 import { byPts, usePlayers } from '@/hooks/usePlayers';
 import type { Assiduite, Joueur } from '@/types';
+import { fold } from '@/utils/fmt';
 
 export type Tri = 'pts' | 'assid';
 
 type Merged = Joueur & { assid: Assiduite | null };
 
 export type Ranked = Merged & { rank: number | null };
-
-const norm = (s: string) =>
-  s
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
 
 const byAssid = (a: Merged, b: Merged) =>
   (b.assid?.pourcentage ?? -1) - (a.assid?.pourcentage ?? -1) || byPts(a, b);
@@ -57,10 +52,10 @@ export function useStats(tri: Tri, q: string) {
   }, [list, assids, tri]);
 
   const rows = useMemo(() => {
-    const words = norm(q).split(/\s+/).filter(Boolean);
+    const words = fold(q).split(/\s+/).filter(Boolean);
     if (!words.length) return ranked;
     return ranked.filter(p => {
-      const key = norm(`${p.nom} ${p.prenom}`);
+      const key = fold(`${p.nom} ${p.prenom}`);
       return words.every(w => key.includes(w));
     });
   }, [ranked, q]);

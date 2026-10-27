@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { PlayerPicker } from '@/components/club/PlayerPicker';
 import { Btn } from '@/components/ui/Btn';
 import { Card } from '@/components/ui/Card';
@@ -27,7 +27,7 @@ export default function MatchScreen() {
           action={<Btn label="Réessayer" icon="refresh" variant="secondary" onPress={() => reload()} />}
         />
       ) : (
-        <KeyboardAvoidingView style={gs.fill} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <KeyboardAvoidingView style={gs.fill} behavior="padding">
           <ScrollView contentContainerStyle={s.body} keyboardShouldPersistTaps="handled">
             <Side title="Vainqueur" icon="trophy" t="success" isSet={!!win} style={s.top}>
               <PlayerPicker

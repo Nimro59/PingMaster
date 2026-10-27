@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { Badge } from '@/components/ui/Badge';
 import { Btn, IconBtn, usePress } from '@/components/ui/Btn';
+import { Card } from '@/components/ui/Card';
 import { Sheet } from '@/components/ui/Sheet';
 import { C, gs, rad, sp, txt } from '@/constants/theme';
 import type { Match } from '@/types';
@@ -94,7 +95,7 @@ type SideProps = {
 
 function Side({ name, v, isWin, onStep }: SideProps) {
   return (
-    <View style={[s.side, isWin && s.sideWin]}>
+    <Card style={[s.side, isWin && s.sideWin]}>
       <Text style={[txt.body, s.name]} numberOfLines={2}>
         {name}
       </Text>
@@ -111,7 +112,7 @@ function Side({ name, v, isWin, onStep }: SideProps) {
           label={`Ajouter un set à ${name}`}
         />
       </View>
-    </View>
+    </Card>
   );
 }
 
@@ -148,16 +149,7 @@ function Preset({ label, isOn, onPress }: { label: string; isOn: boolean; onPres
 const s = StyleSheet.create({
   body: { gap: sp.lg, paddingBottom: sp.xs },
   sides: { alignItems: 'stretch', gap: sp.md },
-  side: {
-    flex: 1,
-    alignItems: 'center',
-    gap: sp.sm,
-    padding: sp.lg,
-    borderRadius: rad.lg,
-    borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.bgCard,
-  },
+  side: { flex: 1, alignItems: 'center', gap: sp.sm },
   sideWin: { borderColor: C.success, backgroundColor: C.successMuted },
   name: { minHeight: 40, lineHeight: 20, textAlign: 'center' },
   crown: { height: 22, justifyContent: 'center' },

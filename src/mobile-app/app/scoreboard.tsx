@@ -1,9 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ReactNode, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Badge, Dot } from '@/components/ui/Badge';
-import { Btn, IconBtn, usePress } from '@/components/ui/Btn';
+import { Btn, IconBtn } from '@/components/ui/Btn';
 import { Card } from '@/components/ui/Card';
 import { Empty, Loader } from '@/components/ui/Empty';
 import { Fab } from '@/components/ui/Fab';
@@ -222,27 +221,18 @@ function Panel({ name, score, sets, isSrv, onPt, onSet }: PanelProps) {
       <Btn label="+ Set" size="sm" variant="secondary" onPress={onSet} />
       <View style={[gs.row, s.pad]}>
         <IconBtn icon="remove" size={56} color={C.textSub} label="Retirer un point" onPress={() => onPt(-1)} />
-        <PlusBtn onPress={() => onPt(1)} />
+        <IconBtn
+          icon="add"
+          size={80}
+          color={C.white}
+          bg={C.primary}
+          border={C.primary}
+          label="Ajouter un point"
+          onPress={() => onPt(1)}
+          style={s.plus}
+        />
       </View>
     </View>
-  );
-}
-
-function PlusBtn({ onPress }: { onPress: () => void }) {
-  const press = usePress(0.92);
-  return (
-    <Animated.View style={press.style}>
-      <Pressable
-        onPress={onPress}
-        onPressIn={press.onPressIn}
-        onPressOut={press.onPressOut}
-        accessibilityRole="button"
-        accessibilityLabel="Ajouter un point"
-        style={[gs.center, s.plus]}
-      >
-        <Ionicons name="add" size={40} color={C.white} />
-      </Pressable>
-    </Animated.View>
   );
 }
 
@@ -273,8 +263,6 @@ const s = StyleSheet.create({
   score: { color: C.textMain, fontSize: 96, lineHeight: 104, fontWeight: '800' },
   pad: { gap: sp.md },
   plus: {
-    width: 80,
-    height: 80,
     borderRadius: rad.full,
     backgroundColor: C.primary,
     shadowColor: C.primary,

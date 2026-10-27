@@ -8,15 +8,16 @@ import { Inscrits } from '@/components/tournoi/Inscrits';
 import { PoolCard } from '@/components/tournoi/PoolCard';
 import { ScoreModal } from '@/components/tournoi/ScoreModal';
 import { StatusBadge, TournoiCard } from '@/components/tournoi/TournoiCard';
-import { Btn, IconBtn } from '@/components/ui/Btn';
+import { Btn } from '@/components/ui/Btn';
 import { Empty, Loader } from '@/components/ui/Empty';
 import { Fab } from '@/components/ui/Fab';
 import { Header } from '@/components/ui/Header';
 import { Screen } from '@/components/ui/Screen';
 import { Segmented, type SegOpt } from '@/components/ui/Segmented';
 import { C, gs, sp, txt } from '@/constants/theme';
-import { hasBye, played, plural, poolKeys, poolMatchs, useTournoi, useTournois, type Tab } from '@/hooks/useTournoi';
+import { hasBye, played, poolKeys, poolMatchs, useTournoi, useTournois, type Tab } from '@/hooks/useTournoi';
 import type { Match, Tournoi } from '@/types';
+import { plural } from '@/utils/fmt';
 
 const OFFLINE = {
   icon: 'cloud-offline-outline',
@@ -63,7 +64,7 @@ export default function TournoiScreen() {
         refreshControl={pull(isLoad, () => refresh())}
         ListEmptyComponent={isReady ? <Empty {...(err ? OFFLINE : NONE)} /> : <Loader />}
       />
-      <Fab icon="add" onPress={() => setNew(true)} />
+      <Fab icon="add" a11y="Nouveau tournoi" onPress={() => setNew(true)} />
       <CreateSheet visible={isNew} isLoad={isSaving} onClose={() => setNew(false)} onSubmit={create} />
     </Screen>
   );
@@ -187,23 +188,21 @@ function Detail({ t, onBack }: { t: Tournoi; onBack: () => void }) {
 
   return (
     <Screen>
-      <View style={s.head}>
-        <View style={[gs.row, s.top]}>
-          <IconBtn icon="chevron-back" onPress={onBack} label="Retour aux tournois" />
-          <View style={[gs.fill, s.titles]}>
-            <View style={[gs.row, s.meta]}>
-              <StatusBadge status={status} />
-              <Text style={[txt.caption, txt.num]} numberOfLines={1}>
-                {plural(t.nb_tables, 'table')}
-              </Text>
-            </View>
-            <Text style={txt.h1} numberOfLines={1}>
-              {t.nom}
+      <Header
+        back
+        onBack={onBack}
+        title={t.nom}
+        caption={
+          <View style={[gs.row, s.meta]}>
+            <StatusBadge status={status} />
+            <Text style={[txt.caption, txt.num]} numberOfLines={1}>
+              {plural(t.nb_tables, 'table')}
             </Text>
           </View>
-        </View>
+        }
+      >
         <Segmented opts={opts} value={tab} onChange={show} />
-      </View>
+      </Header>
       <Animated.View key={tab} entering={FadeIn.duration(180)} style={gs.fill}>
         {body()}
       </Animated.View>
@@ -232,10 +231,7 @@ function Wait({ isLoad, err, onRetry }: { isLoad: boolean; err: string | null; o
 
 const s = StyleSheet.create({
   list: { paddingHorizontal: sp.lg, paddingTop: sp.xs, paddingBottom: 96, gap: sp.md },
-  head: { paddingHorizontal: sp.lg, paddingTop: sp.sm, paddingBottom: sp.md, gap: sp.lg },
-  top: { gap: sp.md, minHeight: 48 },
-  titles: { gap: sp.xs },
-  meta: { gap: sp.sm },
+  meta: { gap: sp.sm, marginBottom: sp.xs },
   body: { padding: sp.lg, gap: sp.lg, paddingBottom: sp.xxl },
   bracket: { paddingTop: sp.lg, paddingBottom: sp.xxl },
   foot: { gap: sp.md, paddingTop: sp.sm },

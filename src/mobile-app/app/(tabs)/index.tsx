@@ -49,13 +49,14 @@ export default function Home() {
   const [tab, setTab] = useState<Tab>('feed');
 
   const mine = players.find(j => j.id === me);
+  const isFeed = tab === 'feed';
 
   const rows = useMemo<Row[]>(
     () =>
-      tab === 'feed'
+      isFeed
         ? posts.map(post => ({ key: `p${post.id}`, post }))
         : agenda.map(evt => ({ key: `e${evt.id}`, evt })),
-    [tab, posts, agenda],
+    [isFeed, posts, agenda],
   );
 
   const onRefresh = () => {
@@ -114,7 +115,8 @@ export default function Home() {
       />
       <Fab
         icon="add"
-        onPress={() => router.push({ pathname: '/modal', params: { kind: tab === 'feed' ? 'post' : 'event' } })}
+        a11y={isFeed ? 'Nouvelle annonce' : 'Nouvel événement'}
+        onPress={() => router.push({ pathname: '/modal', params: { kind: isFeed ? 'post' : 'event' } })}
       />
       <IdentitySheet
         visible={isPick}

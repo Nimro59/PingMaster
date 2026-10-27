@@ -6,8 +6,8 @@ import { Btn } from '@/components/ui/Btn';
 import { Card } from '@/components/ui/Card';
 import { Empty } from '@/components/ui/Empty';
 import { C, gs, sp, txt } from '@/constants/theme';
-import { plural } from '@/hooks/useTournoi';
 import type { Joueur, Participant } from '@/types';
+import { plural } from '@/utils/fmt';
 
 type Props = {
   parts: Participant[];

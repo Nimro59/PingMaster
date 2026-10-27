@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import { api, useApi } from '@/hooks/useApi';
 import type { Evenement, Post } from '@/types';
-import { parseDay } from '@/utils/fmt';
+import { fold, parseDay } from '@/utils/fmt';
 import { hap } from '@/utils/hap';
 
 export const EVT = [
@@ -15,8 +15,6 @@ export const EVT = [
 export type EvtKey = (typeof EVT)[number]['key'];
 export type Agenda = Evenement & { at: Date | null; isPast: boolean };
 export type NewEvt = Pick<Evenement, 'titre' | 'date' | 'heure'> & { type: EvtKey };
-
-export const fold = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 export const evtOf = (type?: string | null) =>
   EVT.find(e => e.key === fold(type ?? '')) ?? { label: type || 'Autre', tone: 'muted' as const };
