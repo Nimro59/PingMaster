@@ -1,24 +1,44 @@
-# Dépendances Frontend
-node_modules/
-.expo/
-dist/
-npm-debug.log
+# --- FRONTEND (Expo / React Native) ---
+src/mobile-app/node_modules/
+src/mobile-app/.expo/
+src/mobile-app/dist/
+src/mobile-app/web-build/
+src/mobile-app/android/
+src/mobile-app/ios/
+src/mobile-app/npm-debug.*
+src/mobile-app/yarn-debug.*
+src/mobile-app/yarn-error.*
 
-# Dépendances Backend
+# --- BACKEND (Python / FastAPI) ---
 __pycache__/
-venv/
-env/
+*.py[cod]
+*$py.class
+src/backend/venv/
+src/backend/.venv/
+src/backend/env/
+
+# --- VARIABLES D'ENVIRONNEMENT & SECRETS ---
 .env
+.env.local
+.env.*.local
+src/backend/.env
+src/mobile-app/.env
 
 # --- BASES DE DONNÉES LOCALES ---
 *.db
+*.sqlite
 *.sqlite3
 pingpong.db
 
-# --- DOCUMENTS PERSONNELS ET OS ---
-.DS_Store
-/*.docx
-/*.pdf
-/~$*
+# --- FICHIERS BUREAUTIQUES & ARCHIVES LOCALES ---
+*.docx
+*.pdf
+~$*
 /*.png
 /*.jpg
+
+# --- SYSTÈME & IDE ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
